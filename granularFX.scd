@@ -1,6 +1,11 @@
 Server.killAll;
 ServerOptions.devices;
 
+/*
+ * Reference: SuperCollider Tutorial: 26. Granular Synthesis, Part II by Eli Fieldsteel
+ * https://youtu.be/MnD8stNB5tE
+*/
+
 // BlackHole 16ch, MacBook Pro Microphone, MacBook Pro Speakers, PLT V6200 Series, PLT V6200 Series, ZoomAudioD
 
 (
