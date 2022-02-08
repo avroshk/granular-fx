@@ -1,2 +1,2 @@
-# granular-fx
+# granularFX
 Granular Effects in Supercollider
