@@ -142,29 +142,31 @@ s.plotTree;
 Synth(\mic, [\in, 0, \out, ~micBus], ~micGrp);
 Synth(\ptr, [\buf, b, \out, ~ptrBus], ~ptrGrp);
 Synth(\rec, [\ptrIn, ~ptrBus, \micIn, ~micBus, \buf, b], ~recGrp);
+
+b.zero;
 ~g = Synth(\granularfx, [
-	\amp, 1.0,
-	\buf, b,
-	\out, 0,
-	\atk, 1,
-	\rel, 1,
-	\gate, 1,
-	\sync, 1,
-	\dens, 40,
-	\baseDur, 0.05,
-	\durRand, 1.5,
-	\rate, 1,
-	\rateRand, 1.midiratio,
-	\pan, 0,
-	\panRand, 0.5,
-	\grainEnv, -1,
-	\ptrBus, ~ptrBus,
-	\ptrSampleDelay, s.sampleRate/3,
-	\ptrRandomSamples, s.sampleRate/6,
-	\minPtrDelay, 1000,
-	\in, 0,
-	\mix, 0
-], ~grainGrp);
+		\amp, 1.0,
+		\buf, b,
+		\out, 0,
+		\atk, 1,
+		\rel, 1,
+		\gate, 1,
+		\sync, 1,
+		\dens, 40,
+		\baseDur, 0.05,
+		\durRand, 1.5,
+		\rate, 1,
+		\rateRand, 1.midiratio,
+		\pan, 0,
+		\panRand, 0.5,
+		\grainEnv, -1,
+		\ptrBus, ~ptrBus,
+		\ptrSampleDelay, s.sampleRate/5 ,
+		\ptrRandomSamples, 0,
+		\minPtrDelay, 1000,
+		\in, 0,
+		\mix, 0
+	], ~grainGrp);
 )
 
 )
@@ -175,7 +177,23 @@ Synth(\rec, [\ptrIn, ~ptrBus, \micIn, ~micBus, \buf, b], ~recGrp);
 // Preset 2: Drum and Bass Down 170 bpm | Piano Warped G Minor 98 bpm
 ~g.set(\amp, 1, \sync, 1, \dens, 128, \baseDur, 0.05, \durRand, 0.5, \rate, (12).midiratio, \mix, 0.75, \pan, 0.0, \panRand, 0.5);
 
-~g.set(\gate, 0);
+// Preset 3: Break Phenom 84 bpm | Synth Chords Cmin11 122 bpm
+~g.set(\amp, 1, \sync, 0, \dens, 128, \baseDur, 0.5, \durRand, 1.0, \rate, (7).midiratio, \mix, 0.8, \pan, 0.0, \panRand, 0.8);
+
+// Preset 4: Break Phenom 84 bpm | Synth Chords Cmin11 122 bpm
+~g.set(\amp, 1, \sync, 1, \dens, 256, \baseDur, 0.5, \durRand, 1.0, \rate, (0).midiratio, \mix, 0.8, \pan, 0.0, \panRand, 0.8);
+
+// Preset 5: Break Phenom 84 bpm | Synth Chords Cmin11 122 bpm (flam effect)
+~g.set(\amp, 1, \sync, 1, \dens, 256, \baseDur, 0.5, \durRand, 1.0, \rate, (0).midiratio, \mix, 0.8, \pan, 0.0, \panRand, 0.8, \ptrSampleDelay, 1);
+
+~g.set(\ptrSampleDelay, s.sampleRate / 5); // grain pointer delay (1/5 seconds)
+~g.set(\ptrSampleDelay, 1); // grain pointer delay (1 samples = 1/48000 seconds = 0.02ms)
+~g.set(\mix, 1.0); // bypass
+~g.set(\gate, 0); // stop
+~g.set(\rateRand, 12.midiratio);
+~g.set(\atk, 1.0, \rel, 0.1);
+
+~g.set(\dens, exprand(20,40), \amp, 1.0, \ptrSampleDelay, 1.linlin(0,4,100, s.sampleRate*2));
 s.defaultGroup.deepFree;
 
 b.play;
