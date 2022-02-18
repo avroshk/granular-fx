@@ -304,7 +304,6 @@ GranulatorSynth {
 			var value = cSpecMix.map(l.value);
 			nbMix.value_(value);
 			synthfx.set(\mix, (1-l.value));
-			postf("Slider Mix action: (%,%)\n", l.value, value);
 		};
 	}
 
@@ -574,7 +573,6 @@ GranulatorUI {
 				nbMix = NumberBox().maxWidth_(40).action_({
 					arg v;
 					sliderMix.valueAction = cSpecMix.unmap(v.value);
-					postf("Numerbox Mix action: (%,%)\n", v.value, cSpecMix.unmap(v.value));
 				}).valueAction_(defaultMixValue)
 			)
 		);
@@ -735,7 +733,6 @@ GranulatorUI {
 	}
 
 	applySynthDefaults {
-		postf("Applying defaults: %\n", title);
 		nbMix.valueAction_(defaultMixValue);
 		nbGain.valueAction_(defaultGainValue);
 		nbGrainSize.valueAction_(defaultGrainSizeValue);
@@ -743,6 +740,5 @@ GranulatorUI {
 		nbDelay.valueAction_(defaultDelayValue);
 		nbPitch.valueAction_(defaultPitchValue);
 		nbStereoWidth.valueAction_(defaultStereoWidthValue);
-		postf("Done applying defaults: %\n", title);
 	}
 }
