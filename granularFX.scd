@@ -6,7 +6,7 @@ ServerOptions.devices;
  * https://youtu.be/MnD8stNB5tE
 */
 
-// BlackHole 16ch, MacBook Pro Microphone, MacBook Pro Speakers, PLT V6200 Series, PLT V6200 Series, ZoomAudioD
+// BlackHole 16ch, MacBook Pro Microphone, MacBook Pro Speakers, PLT V6200 Series, PLT V6200 Series, ZoomAudioD, External Headphones
 
 (
 s.options.inDevice_("BlackHole 16ch");
@@ -32,14 +32,19 @@ b = Buffer.alloc(
 
 ~micBus = Bus.audio(s, 1);
 ~ptrBus = Bus.audio(s, 1);
+
+~micGrp = Group.new;
+~ptrGrp = Group.after(~micGrp);
+~recGrp = Group.after(~ptrGrp);
+~grainGrp = Group.after(~recGrp);
 )
 
 (
 SynthDef.new(\mic, {
 	arg in=0, out=0, amp=1;
 	var sig;
-	sig = SoundIn.ar(in) * amp;
-	Out.ar(out, sig);
+	sig = SoundIn.ar(bus:in) * amp;
+	Out.ar(bus:out,channelsArray:sig);
 }).add;
 
 SynthDef.new(\ptr, {
@@ -76,7 +81,8 @@ SynthDef.new(\granularfx, {
 	pan=0, panRand=0,
 	grainEnv=(-1), ptrBus=0, ptrSampleDelay=20000,
 	ptrRandSamples=5000, minPtrDelay=1000,
-	mix=0, in=0;
+	mix=0, in=0, tempo=120, tempofactor=1,
+	granulationTriggerEnvelope=Env.a;
 
 
 	var sig, env, densCtrl, durCtrl, rateCtrl, panCtrl,
@@ -89,7 +95,7 @@ SynthDef.new(\granularfx, {
 		doneAction:2
 	);
 
-	densCtrl = Select.ar(sync, [Dust.ar(dens), Impulse.ar(dens)]);
+	densCtrl = Select.ar(sync, [Dust.ar(dens), Impulse.ar(dens), Impulse.ar(tempofactor*tempo/60)+Dust.ar(dens)]);
 	durCtrl = baseDur * LFNoise1.ar(100).exprange(1/durRand, durRand);
 	rateCtrl = rate * LFNoise1.ar(100).exprange(1/rateRand, rateRand);
 	panCtrl = pan + LFNoise1.kr(100).bipolar(panRand);
@@ -117,7 +123,7 @@ SynthDef.new(\granularfx, {
 	);
 
 	dry = PlayBuf.ar(
-		numChannels:2,
+		numChannels:1,
 		bufnum:buf,
 		startPos:ptr,
 		loop:1
@@ -129,44 +135,36 @@ SynthDef.new(\granularfx, {
 
 	Out.ar(out, mixedSignal);
 }).add;
-)
 
-(
-~micGrp = Group.new;
-~ptrGrp = Group.after(~micGrp);
-~recGrp = Group.after(~ptrGrp);
-~grainGrp = Group.after(~recGrp);
-)
-s.plotTree;
-(
 Synth(\mic, [\in, 0, \out, ~micBus], ~micGrp);
 Synth(\ptr, [\buf, b, \out, ~ptrBus], ~ptrGrp);
 Synth(\rec, [\ptrIn, ~ptrBus, \micIn, ~micBus, \buf, b], ~recGrp);
+)
 
-b.zero;
+(
 ~g = Synth(\granularfx, [
-		\amp, 1.0,
-		\buf, b,
-		\out, 0,
-		\atk, 1,
-		\rel, 1,
-		\gate, 1,
-		\sync, 1,
-		\dens, 40,
-		\baseDur, 0.05,
-		\durRand, 1.5,
-		\rate, 1,
-		\rateRand, 1.midiratio,
-		\pan, 0,
-		\panRand, 0.5,
-		\grainEnv, -1,
-		\ptrBus, ~ptrBus,
-		\ptrSampleDelay, s.sampleRate/5 ,
-		\ptrRandomSamples, 0,
-		\minPtrDelay, 1000,
-		\in, 0,
-		\mix, 0
-	], ~grainGrp);
+	\amp, 1.0,
+	\buf, b,
+	\out, 0,
+	\atk, 1,
+	\rel, 1,
+	\gate, 1,
+	\sync, 1,
+	\dens, 40,
+	\baseDur, 0.05,
+	\durRand, 1.5,
+	\rate, 1,
+	\rateRand, 1.midiratio,
+	\pan, 0,
+	\panRand, 0.5,
+	\grainEnv, -1,
+	\ptrBus, ~ptrBus,
+	\ptrSampleDelay, s.sampleRate/3,
+	\ptrRandomSamples, s.sampleRate/6,
+	\minPtrDelay, 1000,
+	\in, 0,
+	\mix, 1.0
+], ~grainGrp);
 )
 
 )
@@ -177,24 +175,20 @@ b.zero;
 // Preset 2: Drum and Bass Down 170 bpm | Piano Warped G Minor 98 bpm
 ~g.set(\amp, 1, \sync, 1, \dens, 128, \baseDur, 0.05, \durRand, 0.5, \rate, (12).midiratio, \mix, 0.75, \pan, 0.0, \panRand, 0.5);
 
-// Preset 3: Break Phenom 84 bpm | Synth Chords Cmin11 122 bpm
-~g.set(\amp, 1, \sync, 0, \dens, 128, \baseDur, 0.5, \durRand, 1.0, \rate, (7).midiratio, \mix, 0.8, \pan, 0.0, \panRand, 0.8);
+~g.set(\amp, 1, \sync, 2, \dens, 8, \baseDur, 0.2, \durRand, 1, \rate, (0).midiratio, \mix, 0.0, \pan, 0.0, \panRand, 0.5);
 
-// Preset 4: Break Phenom 84 bpm | Synth Chords Cmin11 122 bpm
-~g.set(\amp, 1, \sync, 1, \dens, 256, \baseDur, 0.5, \durRand, 1.0, \rate, (0).midiratio, \mix, 0.8, \pan, 0.0, \panRand, 0.8);
+~g.set(\tempo, 170, \tempofactor, 1);
+~g.set(\ptrSampleDelay, 1);
+~g.set(\ptrRandomSamples, 0);
+~g.set(\minPtrDelay, 0);
+~g.set(\gate, 0);
 
-// Preset 5: Break Phenom 84 bpm | Synth Chords Cmin11 122 bpm (flam effect)
-~g.set(\amp, 1, \sync, 1, \dens, 256, \baseDur, 0.5, \durRand, 1.0, \rate, (0).midiratio, \mix, 0.8, \pan, 0.0, \panRand, 0.8, \ptrSampleDelay, 1);
-
-~g.set(\ptrSampleDelay, s.sampleRate / 5); // grain pointer delay (1/5 seconds)
-~g.set(\ptrSampleDelay, 1); // grain pointer delay (1 samples = 1/48000 seconds = 0.02ms)
-~g.set(\mix, 1.0); // bypass
-~g.set(\gate, 0); // stop
-~g.set(\rateRand, 12.midiratio);
-~g.set(\atk, 1.0, \rel, 0.1);
-
-~g.set(\dens, exprand(20,40), \amp, 1.0, \ptrSampleDelay, 1.linlin(0,4,100, s.sampleRate*2));
+~g.free;
 s.defaultGroup.deepFree;
 
 b.play;
 b.plot;
+
+{ Impulse.kr(16)*0.9 }.plot(1);
+{ Dust.kr(16)*0.9 }.plot(1);
+{ Impulse.kr(16)*0.9+Dust.kr(16)*0.9 }.plot(1);
