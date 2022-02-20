@@ -698,6 +698,22 @@ GranulatorUI {
 		^onButton.value;
 	}
 
+	disableButton {
+		onButton.enabled_(0);
+		onButton.states_([
+			["Off", Color.gray(0.2, 0.8), Color.gray(0.8, 0.5)],
+			["On", Color.gray(0.2, 0.8), Color.grey(0.9, 0.5)]
+		]);
+	}
+
+	enableButton {
+		onButton.enabled_(1);
+		onButton.states_([
+			["Off", Color.gray(0.2), Color.gray(0.8)],
+			["On", Color.gray(0.2), Color.grey(0.9)]
+		]);
+	}
+
 	disableElements {
 		sliderMix.enabled_(0);
 		nbMix.enabled_(0);

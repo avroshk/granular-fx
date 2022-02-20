@@ -69,12 +69,21 @@ s.waitForBoot({
 		granulatorUI1.applySynthDefaults;
 		granulatorUI2.applySynthDefaults;
 		granulatorUI3.applySynthDefaults;
+
+		granulatorUI1.enableButton;
+		granulatorUI2.enableButton;
+		granulatorUI3.enableButton;
 	};
 
 	tearDown = {
+		granulatorUI1.disableButton;
+		granulatorUI2.disableButton;
+
+		granulatorUI3.disableButton;
 		granulatorUI1.turnOff;
 		granulatorUI2.turnOff;
 		granulatorUI3.turnOff;
+
 		gSetup.freeAll;
 	};
 
@@ -82,7 +91,7 @@ s.waitForBoot({
 
 	// UI
 	QtGUI.palette = QPalette.dark;
-	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 1000, height: 400));
+	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 1000, height: 400)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
 	GranulatorMasterUI.masterInit(s, setUp, tearDown);
@@ -117,5 +126,5 @@ s.plotTree;
 // [*] 6 Moved Master UI elements to GUI Class GranulatorMasterUI
 // [*] 7 Fix Number boxshades
 // [*] Init Synth with sensible params
-// [ ] Disable Synth On/Off button till Audio devices are ready
+// [*] Disable Synth On/Off button till Audio devices are ready
  
