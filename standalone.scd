@@ -1,4 +1,10 @@
-// https://lukaprincic.si/development-log/supercollider-granulator-a-gui
+/*
+ * Reference: SuperCollider Tutorial: 26. Granular Synthesis, Part II by Eli Fieldsteel
+ * https://youtu.be/MnD8stNB5tE
+ *
+ * GUI Inspiration
+ * https://lukaprincic.si/development-log/supercollider-granulator-a-gui
+*/
 
 // Setup granularFX UI Classes
 (
@@ -134,4 +140,3 @@ s.scope;
 // [ ] Add Sync slider/button
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
-
