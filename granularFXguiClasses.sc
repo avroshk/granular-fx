@@ -78,7 +78,7 @@ GranulatorSetup {
 	init {
 		buffer = Buffer.alloc(server, server.sampleRate * bufferLength,1);
 
-		micBus = Bus.audio(server, 1);
+		micBus = Bus.audio(server, 2);
 		ptrBus = Bus.audio(server, 1);
 		masterBus = Bus.audio(server, 2);
 
@@ -115,7 +115,8 @@ GranulatorSetup {
 		SynthDef.new(\mic, {
 		    arg in=0, out=0, amp=1;
 		    var sig;
-		    sig = SoundIn.ar(bus:in) * amp;
+			// Assume 2 channel Input device
+		    sig = [SoundIn.ar(bus:in),SoundIn.ar(bus:(in+1))] * amp;
 		    Out.ar(bus:out,channelsArray:sig);
 		}).send(server);
 
@@ -145,9 +146,11 @@ GranulatorSetup {
 		}).send(server);
 
 		SynthDef.new(\master, {
-			arg in=0, out=0, gain=1.0;
-			var sig;
-			sig = In.ar(in, numChannels: 2) * gain;
+			arg dryIn=0, wetIn=0, out=0, gain=1.0, mix=0.0;
+			var dry, wet, sig;
+			dry = In.ar(dryIn, numChannels: 2);
+			wet = In.ar(wetIn, numChannels: 2);
+			sig = ((dry * (1.0-mix) ) + (wet * mix)) * gain;
 			Out.ar(out, sig);
 		}).send(server);
 	}
@@ -156,7 +159,7 @@ GranulatorSetup {
 		micSynth = Synth(\mic, [\in, inBus, \out, micBus], micGrp);
 		ptrSynth = Synth(\ptr, [\buf, buffer, \out, ptrBus], ptrGrp);
 		recSynth = Synth(\rec, [\ptrIn, ptrBus, \micIn, micBus, \buf, buffer], recGrp);
-		masterSynth = Synth(\master, [\in, masterBus, \out, outBus], masterGrp);
+		masterSynth = Synth(\master, [\dryIn, micBus, \wetIn, masterBus, \out, outBus], masterGrp);
 
 		synths = (
 			\mic: micSynth,
@@ -173,6 +176,14 @@ GranulatorSetup {
 		masterGainSlider.action = {
 			arg l;
 			masterSynth.set(\gain, l.value);
+		};
+	}
+
+	setMasterMixAction {
+		arg masterMixSlider;
+		masterMixSlider.action = {
+			arg l;
+			masterSynth.set(\mix, l.value);
 		};
 	}
 
@@ -226,13 +237,12 @@ GranulatorSynth {
 		    pan=0, panRand=0,
 		    grainEnv=(-1), ptrBus=0, ptrSampleDelay=20000,
 		    ptrRandSamples=5000, minPtrDelay=1000,
-		    mix=0, in=0, tempo=120, tempofactor=1,
+		    tempo=120, tempofactor=1,
 		    granulationTriggerEnvelope=Env.asr;
 
 
 		    var sig, env, densCtrl, durCtrl, rateCtrl, panCtrl,
-		    origPtr, ptr, ptrRand, totalDelay, maxGrainDur,
-		    dry, mixedSignal;
+		    origPtr, ptr, ptrRand, totalDelay, maxGrainDur;
 
 		    env = EnvGen.kr(
 		        Env.asr(attackTime:atk, sustainLevel:1,releaseTime:rel),
@@ -267,18 +277,8 @@ GranulatorSynth {
 		        envbufnum:grainEnv
 		    );
 
-		    dry = PlayBuf.ar(
-		        numChannels:1,
-		        bufnum:buf,
-		        startPos:ptr,
-		        loop:1
-		    );
-
 		    sig = (sig * env * amp);
-		    dry = (dry!2 * amp);
-		    mixedSignal = (mix*dry) + ((1-mix)*sig);
-
-		    Out.ar(out, mixedSignal);
+		    Out.ar(out, sig);
 		}).send(server);
 	}
 
@@ -309,25 +309,13 @@ GranulatorSynth {
 					\ptrBus, ptrBus,
 					\ptrSampleDelay, 0,
 					\ptrRandomSamples, 0,
-					\minPtrDelay, 0,
-					\in, 0,
-					\mix, 0.00
+					\minPtrDelay, 0
 				], grainGrp);
 				gui.enableElements;
 			} {
 				synthfx.free;
 				gui.disableElements;
 			}
-		};
-	}
-
-	setMixAction {
-		arg cSpecMix, sliderMix, nbMix;
-		sliderMix.action = {
-			arg l;
-			var value = cSpecMix.map(l.value);
-			nbMix.value_(value);
-			synthfx.set(\mix, (1-l.value));
 		};
 	}
 
@@ -398,7 +386,7 @@ GranulatorMasterUI {
 	classvar pluginTitleLabel, masterLabel,
 	inputDeviceLabel, outputDeviceLabel,
 	<masterGainSlider, masterGainText,
-	masterMixSlider, masterMixText,
+	<masterMixSlider, masterMixText,
 	inputDevicePopUp, outputDevicePopUp,
 	loadingText;
 
@@ -412,8 +400,8 @@ GranulatorMasterUI {
 		masterLabel = StaticText().string_("Master").font_(Font("Helvetica", 16, bold:true));
 		masterGainSlider = Slider().value_(defaultMasterGainValue).orientation_(\vertical);
 		masterGainText = StaticText().string_("Gain").align_(\center);
-		masterMixSlider = Slider().orientation_(\vertical).visible_(false);
-		masterMixText = StaticText().string_("Mix").align_(\center).visible_(false);
+		masterMixSlider = Slider().orientation_(\vertical);
+		masterMixText = StaticText().string_("Dry/Wet").align_(\center);
 		loadingText = StaticText().align_(\center);
 		inputDevicePopUp = PopUpMenu().items_(ServerOptions.inDevices).font_(Font("Helvetica",12));
 		outputDevicePopUp = PopUpMenu().items_(ServerOptions.outDevices).font_(Font("Helvetica",12));
@@ -431,7 +419,10 @@ GranulatorMasterUI {
 			this.setOutputDevice(server, c.item);
 			this.runBootSequence(server, setUp, tearDown);
 		};
+	}
 
+	*refreshAudioDevices {
+		arg server, setUp, tearDown;
 		this.setPreferredDevices(server);
 		this.setDefaultAudioDevices(server);
 		// Defer, so that changes in the audio devices
@@ -545,8 +536,7 @@ GranulatorMasterUI {
 					VLayout(
 						masterMixSlider,
 						masterMixText
-					),
-					nil
+					)
 				)
 			).margins_([0,20,0,0])
 		)
@@ -556,7 +546,6 @@ GranulatorMasterUI {
 GranulatorUI {
 	var <title;
 	var titleLabel, <onButton,
-	mixLayout, <cSpecMix, <sliderMix, <nbMix,
 	gainLayout, <cSpecGain, <sliderGain, <nbGain,
 	grainDensityLayout, <cSpecGrainDensity, <sliderGrainDensity, <nbGrainDensity,
 	grainSizeLayout, <cSpecGrainSize, <sliderGrainSize, <nbGrainSize,
@@ -565,8 +554,7 @@ GranulatorUI {
 	stereoWidthLayout, <cSpecStereoWidth, <sliderStereoWidth, <nbStereoWidth;
 
 	// Synth Defaults
-	var defaultMixValue = 100,
-	defaultGainValue = 1.0,
+	var defaultGainValue = 1.0,
 	defaultGrainDensityValue = 8,
 	defaultGrainSizeValue = 0.01,
 	defaultDelayValue = 0,
@@ -588,21 +576,6 @@ GranulatorUI {
 			])
 			.minHeight_(20)
 			.minWidth_(70);
-
-		mixLayout = VLayout(
-			HLayout(
-				StaticText().string_("Dry/Wet"),
-				StaticText().string_("%").align_(\right),
-			),
-			HLayout(
-				cSpecMix = ControlSpec(0,100,step:1,units:"%");
-				sliderMix = Slider().orientation_(\horizontal);,
-				nbMix = NumberBox().maxWidth_(40).action_({
-					arg v;
-					sliderMix.valueAction = cSpecMix.unmap(v.value);
-				}).valueAction_(defaultMixValue)
-			)
-		);
 
 		gainLayout = VLayout(
 			HLayout(
@@ -703,7 +676,6 @@ GranulatorUI {
 		^VLayout(
 			titleLabel,
 			onButton,
-			mixLayout,
 			gainLayout,
 			grainDensityLayout,
 			grainSizeLayout,
@@ -742,8 +714,6 @@ GranulatorUI {
 	}
 
 	disableElements {
-		sliderMix.enabled_(0);
-		nbMix.enabled_(0);
 		sliderGain.enabled_(0);
 		nbGain.enabled_(0);
 		sliderGrainDensity.enabled_(0);
@@ -759,8 +729,6 @@ GranulatorUI {
 	}
 
 	enableElements {
-		sliderMix.enabled_(1);
-		nbMix.enabled_(1);
 		sliderGain.enabled_(1);
 		nbGain.enabled_(1);
 		sliderGrainDensity.enabled_(1);
@@ -776,7 +744,6 @@ GranulatorUI {
 	}
 
 	applySynthDefaults {
-		nbMix.valueAction_(defaultMixValue);
 		nbGain.valueAction_(defaultGainValue);
 		nbGrainSize.valueAction_(defaultGrainSizeValue);
 		nbGrainDensity.valueAction_(defaultGrainDensityValue);
