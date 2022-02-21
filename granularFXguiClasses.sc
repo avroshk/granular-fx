@@ -410,10 +410,10 @@ GranulatorMasterUI {
 		inputDeviceLabel = StaticText().string_("Input Device").font_(Font("Helvetica", 14, bold:true));
 		outputDeviceLabel = StaticText().string_("Output Device").font_(Font("Helvetica", 14, bold:true));
 		masterLabel = StaticText().string_("Master").font_(Font("Helvetica", 16, bold:true));
-		masterGainSlider = Slider(nil,Rect(0,0,10,100)).value_(defaultMasterGainValue).orientation_(\vertical);
+		masterGainSlider = Slider().value_(defaultMasterGainValue).orientation_(\vertical);
 		masterGainText = StaticText().string_("Gain").align_(\center);
-		masterMixSlider = Slider(nil,Rect(0,0,10,100)).orientation_(\vertical);
-		masterMixText = StaticText().string_("Mix").align_(\center);
+		masterMixSlider = Slider().orientation_(\vertical).visible_(false);
+		masterMixText = StaticText().string_("Mix").align_(\center).visible_(false);
 		loadingText = StaticText().align_(\center);
 		inputDevicePopUp = PopUpMenu().items_(ServerOptions.inDevices).font_(Font("Helvetica",12));
 		outputDevicePopUp = PopUpMenu().items_(ServerOptions.outDevices).font_(Font("Helvetica",12));
@@ -540,12 +540,13 @@ GranulatorMasterUI {
 				HLayout(
 					VLayout(
 						masterGainSlider,
-						masterGainText
+						masterGainText,
 					),
 					VLayout(
 						masterMixSlider,
 						masterMixText
-					)
+					),
+					nil
 				)
 			).margins_([0,20,0,0])
 		)

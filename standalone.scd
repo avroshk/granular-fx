@@ -92,7 +92,7 @@ s.waitForBoot({
 
 	// UI
 	QtGUI.palette = QPalette.dark;
-	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 1000, height: 400)).alpha_(0.98);
+	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 400)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
 	GranulatorMasterUI.masterInit(s, setUp, tearDown);
