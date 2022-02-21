@@ -187,6 +187,15 @@ GranulatorSetup {
 		};
 	}
 
+	setMasterTempoAction {
+		arg cSpecTempo, sliderTempo, nbTempo;
+		sliderTempo.action = {
+			arg l;
+			var value = cSpecTempo.map(l.value);
+			nbTempo.value_(value);
+		};
+	}
+
 	freeBuses {
 		buses.do(_.free);
 		buses = nil;
@@ -387,10 +396,12 @@ GranulatorMasterUI {
 	inputDeviceLabel, outputDeviceLabel,
 	<masterGainSlider, masterGainText,
 	<masterMixSlider, masterMixText,
+	masterTempoLayout, <cSpecTempo, <masterTempoSlider, <nbTempo,
 	inputDevicePopUp, outputDevicePopUp,
 	loadingText;
 
-	classvar defaultMasterGainValue = 1.0;
+	classvar defaultMasterGainValue = 1.0,
+	defaultMasterTempo = 120;
 
 	*masterInit {
 		arg server, setUp, tearDown;
@@ -405,6 +416,20 @@ GranulatorMasterUI {
 		loadingText = StaticText().align_(\center);
 		inputDevicePopUp = PopUpMenu().items_(ServerOptions.inDevices).font_(Font("Helvetica",12));
 		outputDevicePopUp = PopUpMenu().items_(ServerOptions.outDevices).font_(Font("Helvetica",12));
+		masterTempoLayout = VLayout(
+			HLayout(
+				StaticText().string_("Tempo"),
+				StaticText().string_("bpm").align_(\right),
+			),
+			HLayout(
+				cSpecTempo = ControlSpec(20,999,step:0.1);
+				masterTempoSlider = Slider().orientation_(\horizontal),
+				nbTempo = NumberBox().maxWidth_(40).action_({
+					arg v;
+					masterTempoSlider.valueAction = cSpecTempo.unmap(v.value);
+				}).valueAction_(defaultMasterTempo)
+			)
+		);
 
 		GranulatorPreferences.initClass;
 
@@ -528,6 +553,7 @@ GranulatorMasterUI {
 			).margins_([0,20,0,0]),
 			VLayout(
 				masterLabel,
+				masterTempoLayout,
 				HLayout(
 					VLayout(
 						masterGainSlider,

@@ -34,6 +34,7 @@ s.waitForBoot({
 
 		gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
 		gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
+		gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
 
 		gSynth1 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
 		gSynth2 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
@@ -90,7 +91,7 @@ s.waitForBoot({
 
 	// UI
 	QtGUI.palette = QPalette.dark;
-	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 400)).alpha_(0.98);
+	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 500)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
 	GranulatorMasterUI.masterInit(s, setUp, tearDown);
@@ -128,5 +129,9 @@ s.scope;
 // [*] 7 Fix Number boxshades
 // [*] Init Synth with sensible params
 // [*] Disable Synth On/Off button till Audio devices are ready
+// [*] Sync GRanulator outputs (check dry/wet logic)
+// [*] Add tempo slider in Master
+// [ ] Add Sync slider/button
+// [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
-// [ ] 5 Sync GRanulator outputs (check dry/wet logic)
+
