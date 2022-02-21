@@ -33,6 +33,7 @@ s.waitForBoot({
 		gSetup.init;
 
 		gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
+		gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
 
 		gSynth1 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
 		gSynth2 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
@@ -45,7 +46,6 @@ s.waitForBoot({
 		gSynth2.setOnButtonAction(granulatorUI2);
 		gSynth3.setOnButtonAction(granulatorUI3);
 
-		gSynth1.setMixAction(granulatorUI1.cSpecMix, granulatorUI1.sliderMix, granulatorUI1.nbMix);
 		gSynth1.setGainAction(granulatorUI1.cSpecGain, granulatorUI1.sliderGain, granulatorUI1.nbGain);
 		gSynth1.setGrainDensityAction(granulatorUI1.cSpecGrainDensity, granulatorUI1.sliderGrainDensity, granulatorUI1.nbGrainDensity);
 		gSynth1.setGrainSizeAction(granulatorUI1.cSpecGrainSize, granulatorUI1.sliderGrainSize, granulatorUI1.nbGrainSize);
@@ -53,7 +53,6 @@ s.waitForBoot({
 		gSynth1.setPitchAction(granulatorUI1.cSpecPitch, granulatorUI1.sliderPitch, granulatorUI1.nbPitch);
 		gSynth1.setStereoWidthAction(granulatorUI1.cSpecStereoWidth, granulatorUI1.sliderStereoWidth, granulatorUI1.nbStereoWidth);
 
-		gSynth2.setMixAction(granulatorUI2.cSpecMix, granulatorUI2.sliderMix, granulatorUI2.nbMix);
 		gSynth2.setGainAction(granulatorUI2.cSpecGain, granulatorUI2.sliderGain, granulatorUI2.nbGain);
 		gSynth2.setGrainDensityAction(granulatorUI2.cSpecGrainDensity, granulatorUI2.sliderGrainDensity, granulatorUI2.nbGrainDensity);
 		gSynth2.setGrainSizeAction(granulatorUI2.cSpecGrainSize, granulatorUI2.sliderGrainSize, granulatorUI2.nbGrainSize);
@@ -61,7 +60,6 @@ s.waitForBoot({
 		gSynth2.setPitchAction(granulatorUI2.cSpecPitch, granulatorUI2.sliderPitch, granulatorUI2.nbPitch);
 		gSynth2.setStereoWidthAction(granulatorUI2.cSpecStereoWidth, granulatorUI2.sliderStereoWidth, granulatorUI2.nbStereoWidth);
 
-		gSynth3.setMixAction(granulatorUI3.cSpecMix, granulatorUI3.sliderMix, granulatorUI3.nbMix);
 		gSynth3.setGainAction(granulatorUI3.cSpecGain, granulatorUI3.sliderGain, granulatorUI3.nbGain);
 		gSynth3.setGrainDensityAction(granulatorUI3.cSpecGrainDensity, granulatorUI3.sliderGrainDensity, granulatorUI3.nbGrainDensity);
 		gSynth3.setGrainSizeAction(granulatorUI3.cSpecGrainSize, granulatorUI3.sliderGrainSize, granulatorUI3.nbGrainSize);
@@ -96,6 +94,9 @@ s.waitForBoot({
 	~gwin.background = Color.gray(0.3,1);
 
 	GranulatorMasterUI.masterInit(s, setUp, tearDown);
+	setUp.value;
+	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
+
 
 	~gwin.layout = HLayout(
 			GranulatorMasterUI.getMasterLayout,
@@ -112,20 +113,20 @@ s.waitForBoot({
 		tearDown.value;
 	});
 	CmdPeriod.doOnce({~gwin.close});
-
-	setUp.value;
 });
 
 s.plotTree;
 )
 
+s.scope;
 
 // [*] 1 Separate Synth elements from UI elements
 // [*] 2 Disable UI elements when Synth is off
 // [*] 3 Manage default parameters of the synth (save preferences in file)
 // [*] 4 Handle Master Group Grain slider
-// [ ] 5 Sync GRanulator outputs (check dry/wet logic)
 // [*] 6 Moved Master UI elements to GUI Class GranulatorMasterUI
 // [*] 7 Fix Number boxshades
 // [*] Init Synth with sensible params
 // [*] Disable Synth On/Off button till Audio devices are ready
+// [ ] Persist Slider parameters
+// [ ] 5 Sync GRanulator outputs (check dry/wet logic)
