@@ -90,8 +90,6 @@ s.waitForBoot({
 		gSetup.freeAll;
 	};
 
-	setUp.value;
-
 	// UI
 	QtGUI.palette = QPalette.dark;
 	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 1000, height: 400)).alpha_(0.98);
@@ -114,6 +112,8 @@ s.waitForBoot({
 		tearDown.value;
 	});
 	CmdPeriod.doOnce({~gwin.close});
+
+	setUp.value;
 });
 
 s.plotTree;
