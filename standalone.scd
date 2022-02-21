@@ -106,6 +106,7 @@ s.waitForBoot({
 		);
 
 	~gwin.front;
+	~gwin.alwaysOnTop_(true);
 	~gwin.onClose_({
 		tearDown.value;
 	});
@@ -115,7 +116,6 @@ s.waitForBoot({
 s.plotTree;
 
 )
-
 
 
 // [*] 1 Separate Synth elements from UI elements
