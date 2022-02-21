@@ -12,6 +12,7 @@ if (File.exists(classDefFile)) { File.copy(classDefFile, target); }
 
 (
 s.waitForBoot({
+	var inBus=0, outBus=0;
 	var bufferLength=5;
 	var granulatorUI1, granulatorUI2, granulatorUI3;
 	var gSynth1, gSynth2, gSynth3;
@@ -28,12 +29,14 @@ s.waitForBoot({
 	setUp = {
 
 		// Create Buses & Groups to manage the signal chain
-		gSetup = GranulatorSetup.new(s, bufferLength);
+		gSetup = GranulatorSetup.new(s, bufferLength, inBus, outBus);
 		gSetup.init;
 
-		gSynth1 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.grainGrp);
-		gSynth2 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.grainGrp);
-		gSynth3 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.grainGrp);
+		gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
+
+		gSynth1 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
+		gSynth2 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
+		gSynth3 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
 		gSynth1.init;
 		gSynth2.init;
 		gSynth3.init;
@@ -114,17 +117,15 @@ s.waitForBoot({
 });
 
 s.plotTree;
-
 )
 
 
 // [*] 1 Separate Synth elements from UI elements
 // [*] 2 Disable UI elements when Synth is off
 // [*] 3 Manage default parameters of the synth (save preferences in file)
-// [ ] 4 Handle Master Group Grain slider
+// [*] 4 Handle Master Group Grain slider
 // [ ] 5 Sync GRanulator outputs (check dry/wet logic)
 // [*] 6 Moved Master UI elements to GUI Class GranulatorMasterUI
 // [*] 7 Fix Number boxshades
 // [*] Init Synth with sensible params
 // [*] Disable Synth On/Off button till Audio devices are ready
- 

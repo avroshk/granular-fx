@@ -1,4 +1,6 @@
 
+// granularFX GUI Classes
+
 // Save and load preferences
 // Reference: https://github.com/neilcosgrove/LNX_Studio/blob/master/SCClassLibrary/LNX_Studio%20Library/1.%20LNX_Studio/12.%20LNX_File.sc#L4
 GranulatorPreferences {
@@ -53,23 +55,24 @@ GranulatorPreferences {
 	*deletePref { arg path; this.delete(prefDir++path); }
 }
 
-// granularFX GUI Classes
 GranulatorSetup {
 	var server, bufferLength;
 	var <buffer;
 	// Buses
-	var <micBus, <ptrBus;
+	var <micBus, <ptrBus, <masterBus;
 	var <>buses, <>busIDs;
 	// Groups for managing signal flow
-	var <micGrp, <ptrGrp, <recGrp, <grainGrp;
+	var <micGrp, <ptrGrp, <recGrp, <grainGrp, <masterGrp;
 	var <>groups, <>groupIDs;
 	// Synths
-	var <micSynth, <ptrSynth, <recSynth;
+	var <micSynth, <ptrSynth, <recSynth, <masterSynth;
 	var <>synths, <>synthIDs;
+	// in/out Buses
+	var <inBus, <outBus;
 
 	*new {
-		arg server, bufferLength;
-		^super.newCopyArgs(server, bufferLength);
+		arg server, bufferLength, inBus, outBus;
+		^super.newCopyArgs(server, bufferLength, inBus, outBus);
 	}
 
 	init {
@@ -77,10 +80,12 @@ GranulatorSetup {
 
 		micBus = Bus.audio(server, 1);
 		ptrBus = Bus.audio(server, 1);
+		masterBus = Bus.audio(server, 2);
 
 		buses = (
 			\mic: micBus,
-			\ptr: ptrBus
+			\ptr: ptrBus,
+			\master: masterBus
 		);
 
 		busIDs = buses.collect(_.index);
@@ -89,12 +94,14 @@ GranulatorSetup {
 		ptrGrp = Group.after(micGrp);
 		recGrp = Group.after(ptrGrp);
 		grainGrp = Group.after(recGrp);
+		masterGrp = Group.after(grainGrp);
 
 		groups = (
 			\mic: micGrp,
 			\ptr: ptrGrp,
 			\rec: recGrp,
-			\grain: grainGrp
+			\grain: grainGrp,
+			\master: masterGrp
 		);
 
 		groupIDs = groups.collect(_.nodeID);
@@ -136,20 +143,37 @@ GranulatorSetup {
 		        loop:1
 		    );
 		}).send(server);
+
+		SynthDef.new(\master, {
+			arg in=0, out=0, gain=1.0;
+			var sig;
+			sig = In.ar(in, numChannels: 2) * gain;
+			Out.ar(out, sig);
+		}).send(server);
 	}
 
 	createSynths {
-		micSynth = Synth(\mic, [\in, 0, \out, micBus], micGrp);
+		micSynth = Synth(\mic, [\in, inBus, \out, micBus], micGrp);
 		ptrSynth = Synth(\ptr, [\buf, buffer, \out, ptrBus], ptrGrp);
 		recSynth = Synth(\rec, [\ptrIn, ptrBus, \micIn, micBus, \buf, buffer], recGrp);
+		masterSynth = Synth(\master, [\in, masterBus, \out, outBus], masterGrp);
 
 		synths = (
 			\mic: micSynth,
 			\ptr: ptrSynth,
-			\rec: recSynth
+			\rec: recSynth,
+			\master: masterSynth
 		);
 
 		synthIDs = synths.collect(_.nodeID);
+	}
+
+	setMasterGainAction {
+		arg slider;
+		slider.action = {
+			arg l;
+			masterSynth.set(\gain, l.value);
+		};
 	}
 
 	freeBuses {
@@ -180,12 +204,12 @@ GranulatorSetup {
 }
 
 GranulatorSynth {
-	var server, synthfxname, buffer, ptrBus, grainGrp;
+	var server, synthfxname, buffer, ptrBus, outBus, grainGrp;
 	var synthfx;
 
 	*new {
-		arg server, synthfxname, buffer, ptrBus, grainGrp;
-		^super.newCopyArgs(server, synthfxname, buffer, ptrBus, grainGrp)
+		arg server, synthfxname, buffer, ptrBus, outBus, grainGrp;
+		^super.newCopyArgs(server, synthfxname, buffer, ptrBus, outBus, grainGrp)
 	}
 
 	init {
@@ -269,7 +293,7 @@ GranulatorSynth {
 				synthfx = Synth(synthfxname, [
 					\amp, 1,
 					\buf, buffer,
-					\out, 0,
+					\out, outBus,
 					\atk, 1,
 					\rel, 1,
 					\gate, 1,
@@ -373,10 +397,12 @@ GranulatorMasterUI {
 	classvar server, pluginTitle = "granularFX";
 	classvar pluginTitleLabel, masterLabel,
 	inputDeviceLabel, outputDeviceLabel,
-	masterGainSlider, masterGainText,
+	<masterGainSlider, masterGainText,
 	masterMixSlider, masterMixText,
 	inputDevicePopUp, outputDevicePopUp,
 	loadingText;
+
+	classvar defaultMasterGainValue = 1.0;
 
 	*masterInit {
 		arg server, setUp, tearDown;
@@ -384,7 +410,7 @@ GranulatorMasterUI {
 		inputDeviceLabel = StaticText().string_("Input Device").font_(Font("Helvetica", 14, bold:true));
 		outputDeviceLabel = StaticText().string_("Output Device").font_(Font("Helvetica", 14, bold:true));
 		masterLabel = StaticText().string_("Master").font_(Font("Helvetica", 16, bold:true));
-		masterGainSlider = Slider(nil,Rect(0,0,10,100)).orientation_(\vertical);
+		masterGainSlider = Slider(nil,Rect(0,0,10,100)).value_(defaultMasterGainValue).orientation_(\vertical);
 		masterGainText = StaticText().string_("Gain").align_(\center);
 		masterMixSlider = Slider(nil,Rect(0,0,10,100)).orientation_(\vertical);
 		masterMixText = StaticText().string_("Mix").align_(\center);
