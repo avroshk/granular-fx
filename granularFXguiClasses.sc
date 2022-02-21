@@ -169,8 +169,8 @@ GranulatorSetup {
 	}
 
 	setMasterGainAction {
-		arg slider;
-		slider.action = {
+		arg masterGainSlider;
+		masterGainSlider.action = {
 			arg l;
 			masterSynth.set(\gain, l.value);
 		};
