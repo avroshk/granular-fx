@@ -1,3 +1,4 @@
+(
 /*
  * Synth Inspiration
  * SuperCollider Tutorial: 26. Granular Synthesis, Part II by Eli Fieldsteel
@@ -7,7 +8,6 @@
  * https://lukaprincic.si/development-log/supercollider-granulator-a-gui
  */
 
-(
 s.waitForBoot({
 	var inBus=0, outBus=0;
 	var bufferLength=5;
@@ -113,8 +113,6 @@ s.waitForBoot({
 	CmdPeriod.doOnce({~gwin.close});
 });
 
-)
-
 // [*] 1 Separate Synth elements from UI elements
 // [*] 2 Disable UI elements when Synth is off
 // [*] 3 Manage default parameters of the synth (save preferences in file)
@@ -128,3 +126,5 @@ s.waitForBoot({
 // [ ] Add Sync slider/button
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
+
+)
