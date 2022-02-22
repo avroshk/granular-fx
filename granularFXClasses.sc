@@ -146,7 +146,7 @@ GranulatorSetup {
 		}).send(server);
 
 		SynthDef.new(\master, {
-			arg dryIn=0, wetIn=0, out=0, gain=1.0, mix=0.0;
+			arg dryIn=0, wetIn=0, out=0, gain=0.8, mix=0.0;
 			var dry, wet, sig;
 			dry = In.ar(dryIn, numChannels: 2);
 			wet = In.ar(wetIn, numChannels: 2);
@@ -400,7 +400,7 @@ GranulatorMasterUI {
 	inputDevicePopUp, outputDevicePopUp,
 	loadingText;
 
-	classvar defaultMasterGainValue = 1.0,
+	classvar defaultMasterGainValue = 0.8,
 	defaultMasterTempo = 120;
 
 	*masterInit {
