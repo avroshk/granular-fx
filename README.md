@@ -18,3 +18,9 @@ Perform this step once everytime `granularFXClasses.sc` is updated.
 
 * Open `granularFX.scd` in Supercollider and execute following commands from the menu
   * `Language -> Evaluate File` (or Command-Return `⌘ ↩`)
+
+## Usage
+
+* Select suitable Input and Output Devices
+* Turn on granulators and adjust the dry/wet mix
+* `⌘ .` to exit
