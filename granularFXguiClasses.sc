@@ -308,7 +308,7 @@ GranulatorSynth {
 					\gate, 1,
 					\sync, 1,
 					\dens, 8,
-					\baseDur, 0.01,
+					\baseDur, 0.05,
 					\durRand, 1,
 					\rate, 0.midiratio,
 					\rateRand, 0.midiratio,
@@ -316,7 +316,7 @@ GranulatorSynth {
 					\panRand, 0.0,
 					\grainEnv, -1,
 					\ptrBus, ptrBus,
-					\ptrSampleDelay, 0,
+					\ptrSampleDelay, 0.1*server.sampleRate,
 					\ptrRandomSamples, 0,
 					\minPtrDelay, 0
 				], grainGrp);
@@ -582,8 +582,8 @@ GranulatorUI {
 	// Synth Defaults
 	var defaultGainValue = 1.0,
 	defaultGrainDensityValue = 8,
-	defaultGrainSizeValue = 0.01,
-	defaultDelayValue = 0,
+	defaultGrainSizeValue = 0.05,
+	defaultDelayValue = 0.1,
 	defaultPitchValue = 0,
 	defaultStereoWidthValue = 0;
 
