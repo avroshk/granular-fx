@@ -8,6 +8,18 @@
  * https://lukaprincic.si/development-log/supercollider-granulator-a-gui
  */
 
+
+// Hack to explicitly set in/out devices during start-up if Supercollider complains about
+// the "Mismatched sample rates" between input and output devices.
+
+var inDevice = "BlackHole 16ch";
+var outDevice = "MacBook Pro Speakers";
+
+GranulatorPreferences.savePref("inDevice", [inDevice]);
+GranulatorPreferences.savePref("outDevice", [outDevice]);
+s.options.inDevice = inDevice;
+s.options.outDevice = outDevice;
+
 s.waitForBoot({
 	var inBus=0, outBus=0;
 	var bufferLength=5;
