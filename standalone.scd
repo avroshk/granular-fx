@@ -1,20 +1,11 @@
 /*
- * Reference: SuperCollider Tutorial: 26. Granular Synthesis, Part II by Eli Fieldsteel
+ * Synth Inspiration
+ * SuperCollider Tutorial: 26. Granular Synthesis, Part II by Eli Fieldsteel
  * https://youtu.be/MnD8stNB5tE
  *
  * GUI Inspiration
  * https://lukaprincic.si/development-log/supercollider-granulator-a-gui
-*/
-
-// Setup granularFX UI Classes
-(
-var classDefFile = thisProcess.nowExecutingPath.dirname +/+ "granularFXguiClasses.sc";
-var target = Platform.userExtensionDir +/+ "local" +/+ "granularFXguiClasses.sc";
-
-if (File.exists(target), { File.delete(target);}, { "Clean workspace".postln; });
-if (File.exists(classDefFile)) { File.copy(classDefFile, target); }
-
-)
+ */
 
 (
 s.waitForBoot({
@@ -122,10 +113,7 @@ s.waitForBoot({
 	CmdPeriod.doOnce({~gwin.close});
 });
 
-s.plotTree;
 )
-
-s.scope;
 
 // [*] 1 Separate Synth elements from UI elements
 // [*] 2 Disable UI elements when Synth is off
