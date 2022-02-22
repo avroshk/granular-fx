@@ -7,7 +7,7 @@ Granular Effects in Supercollider
 * Install [Supercollider](https://supercollider.github.io/download)
 * Install sc3-plugins
   * Download [sc3-plugins-3.11.1-macOS-signed.zip](https://github.com/supercollider/sc3-plugins/releases/download/Version-3.11.1/sc3-plugins-3.11.1-macOS-signed.zip) and unzip.
-  * Move the contents the unzipped `SC3plugins` directory to `"$HOME/Library/Application Support/SuperCollider/Extensions"`
+  * Move the contents of the unzipped `SC3plugins` directory to `"$HOME/Library/Application Support/SuperCollider/Extensions"`
 
 ## Install
 
