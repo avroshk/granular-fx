@@ -39,3 +39,4 @@ Perform this step once everytime `granularFXClasses.sc` is updated.
   var inDevice = "BlackHole 16ch";
   var outDevice = "Built-in Output";
   ```
+  * The input and output devices specified above should operate on same sample rates. You can check `Audio MIDI Setup` to verify this.
