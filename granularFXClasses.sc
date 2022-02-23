@@ -778,3 +778,104 @@ GranulatorUI {
 		nbStereoWidth.valueAction_(defaultStereoWidthValue);
 	}
 }
+
+GranulatorParam {
+	var name, id, minValue, maxValue, step,
+	default, units;
+
+	var value, cSpec;
+	var <setDefName, <setRawDefName,
+	<setPathName, <setRawPathName,
+	<broadcastOscPathName, <broadcastRawOscPathName;
+
+	var defaultAction, defaultRawValueAction;
+	classvar net;
+
+	*new {
+		arg name, id, minValue, maxValue, step, default, units;
+		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units)
+	}
+
+	init {
+		cSpec = ControlSpec(
+			minValue, maxValue,
+			step: step,
+			default: default,
+			units: units
+		);
+		value = cSpec.unmap(default);
+
+		net = NetAddr("127.0.0.1", NetAddr.langPort);
+		setDefName = "%%OSCsetDef".format(name, id).asSymbol;
+		setRawDefName = "%%OSCsetRawDef".format(name, id).asSymbol;
+		setPathName = "set%%".format(name, id).asSymbol;
+		setRawPathName = "setRaw%%".format(name, id).asSymbol;
+		broadcastOscPathName = "broadcast%%".format(name, id).asSymbol;
+		broadcastRawOscPathName = "broadcastRaw%%".format(name, id).asSymbol;
+		defaultAction = {|msg| this.set(msg[1])};
+		defaultRawValueAction = {|msg| this.setRaw(msg[1])};
+		this.prepareOSCComm;
+		this.broadcast;
+	}
+
+	prepareOSCComm {
+		OSCdef(setDefName, defaultAction, setPathName, net);
+		OSCdef(setRawDefName, defaultRawValueAction, setRawPathName, net);
+	}
+
+	broadcast {
+		net.sendMsg(broadcastOscPathName, this.get);
+		net.sendMsg(broadcastRawOscPathName, this.getRaw);
+	}
+
+	setRaw {
+		arg v;
+		value = v;
+		this.broadcast;
+	}
+
+	set {
+		arg v;
+		value = cSpec.unmap(v);
+		this.broadcast;
+	}
+
+	get { ^cSpec.map(value) }
+	getRaw { ^value }
+	getBounds { ^[minValue, maxValue] }
+
+	setAction {
+		arg action;
+		OSCdef(setDefName).add(action);
+	}
+	setRawAction {
+		arg action;
+		OSCdef(setRawDefName).add(action);
+	}
+
+	clearActions {
+		OSCdef(setDefName).free;
+		OSCdef(setRawDefName).free;
+		this.prepareOSCComm;
+	}
+}
+
+GranulatorParameterStore {
+	classvar params;
+
+	*init {
+		params = ();
+	}
+
+	*addParam {
+		arg name, id, minValue, maxValue, step, default, units;
+		var uniqueId = "%%".format(name, id).asSymbol;
+		var param = GranulatorParam.new(name, id, minValue, maxValue, step, default, units);
+		param.init.value;
+		params.put(uniqueId, param);
+	}
+
+	*getParams {
+		^params
+	}
+}
