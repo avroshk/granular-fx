@@ -34,7 +34,7 @@ Perform this step once everytime `granularFXClasses.sc` is updated.
 
 * Supercollider complains that "Mismatched sample rates are not supported" and refuses to boot up
   * This may be the case if one of the available input audio devices does not support the same sample rate as the default output device.
-  * To circumvent this, before running `granularFX.scd` please specify the in/out devices you intend to use in [`Line 15 & 16`](https://github.com/avroshk/granularFX/blob/main/granularFX.scd#L15-L16) before launching the app. Here's an example,
+  * To circumvent this, before running `granularFX.scd` please specify the in/out devices you intend to use in [`Line 15 & 16`](https://github.com/avroshk/granularFX/blob/main/granularFX.scd#L15-L16). Here's an example,
   ```
   var inDevice = "BlackHole 16ch";
   var outDevice = "Built-in Output";
