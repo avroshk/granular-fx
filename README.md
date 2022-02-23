@@ -16,7 +16,7 @@ Granular Effects in Supercollider
 Perform this step once everytime `granularFXClasses.sc` is updated.
 
 * Open `setup.scd` in Supercollider and execute following commands from the menu
-  * `Language -> Evaluate File` (or click anywhere between line 2 & 8 do Command-Return `⌘ ↩`)
+  * `Language -> Evaluate File` (or Command-Return `⌘ ↩`)
   * `Language -> Recompile Class Library` (or Shift-Command-L `⇧ ⌘ L`)
 
 ## Launch GUI
@@ -29,3 +29,13 @@ Perform this step once everytime `granularFXClasses.sc` is updated.
 * Select suitable Input and Output Devices
 * Turn on granulators and adjust the dry/wet mix
 * `⌘ .` to exit
+
+## Troubleshooting
+
+* Supercollider complains that "Mismatched sample rates are not supported" and refuses to boot up
+  * This may be the case if one of the available input audio devices does not support the same sample rate as the default output device.
+  * To circumvent this, before running `granularFX.scd` please specify the in/out devices you intend to use in [`Line 15 & 16`](https://github.com/avroshk/granularFX/blob/start-up-hack/granularFX.scd#L15-L16). Here's an example,
+  ```
+  var inDevice = "BlackHole 16ch";
+  var outDevice = "Built-in Output";
+  ```
