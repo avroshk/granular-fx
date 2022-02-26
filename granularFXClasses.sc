@@ -571,7 +571,7 @@ GranulatorMasterUI {
 
 GranulatorUI {
 	var <title;
-	var titleLabel, <onButton,
+	var titleLabel, <onButton, <syncButton,
 	gainLayout, <cSpecGain, <sliderGain, <nbGain,
 	grainDensityLayout, <cSpecGrainDensity, <sliderGrainDensity, <nbGrainDensity,
 	grainSizeLayout, <cSpecGrainSize, <sliderGrainSize, <nbGrainSize,
@@ -602,6 +602,12 @@ GranulatorUI {
 			])
 			.minHeight_(20)
 			.minWidth_(70);
+
+		syncButton = Button()
+			.states_([
+				["Sync off", Color.gray(0.2), Color.gray(0.8)],
+				["Sync on", Color.gray(0.2), Color.gray(0.8)],
+			]);
 
 		gainLayout = VLayout(
 			HLayout(
@@ -702,6 +708,7 @@ GranulatorUI {
 		^VLayout(
 			titleLabel,
 			onButton,
+			syncButton,
 			gainLayout,
 			grainDensityLayout,
 			grainSizeLayout,
@@ -740,6 +747,11 @@ GranulatorUI {
 	}
 
 	disableElements {
+		syncButton.enabled_(0);
+		syncButton.states_([
+			["Sync off", Color.gray(0.2, 0.8), Color.gray(0.8, 0.5)],
+			["Sync on", Color.gray(0.2, 0.8), Color.grey(0.9, 0.5)]
+		]);
 		sliderGain.enabled_(0);
 		nbGain.enabled_(0);
 		sliderGrainDensity.enabled_(0);
@@ -755,6 +767,11 @@ GranulatorUI {
 	}
 
 	enableElements {
+		syncButton.enabled_(1);
+		syncButton.states_([
+			["Sync off", Color.gray(0.2), Color.gray(0.8)],
+			["Sync on", Color.gray(0.2), Color.grey(0.9)]
+		]);
 		sliderGain.enabled_(1);
 		nbGain.enabled_(1);
 		sliderGrainDensity.enabled_(1);

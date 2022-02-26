@@ -56,6 +56,10 @@ s.waitForBoot({
 		gSynth2.setOnButtonAction(granulatorUI2);
 		gSynth3.setOnButtonAction(granulatorUI3);
 
+		gSynth1.setSyncButtonAction(granulatorUI1);
+		gSynth2.setSyncButtonAction(granulatorUI2);
+		gSynth3.setSyncButtonAction(granulatorUI3);
+
 		gSynth1.setGainAction(granulatorUI1.cSpecGain, granulatorUI1.sliderGain, granulatorUI1.nbGain);
 		gSynth1.setGrainDensityAction(granulatorUI1.cSpecGrainDensity, granulatorUI1.sliderGrainDensity, granulatorUI1.nbGrainDensity);
 		gSynth1.setGrainSizeAction(granulatorUI1.cSpecGrainSize, granulatorUI1.sliderGrainSize, granulatorUI1.nbGrainSize);
@@ -107,15 +111,14 @@ s.waitForBoot({
 	setUp.value;
 	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
 
-
 	~gwin.layout = HLayout(
-			GranulatorMasterUI.getMasterLayout,
-			HLayout(
-				granulatorUI1.getLayout.margins_([20,0,0,0]),
-				granulatorUI2.getLayout.margins_([20,0,0,0]),
-				granulatorUI3.getLayout.margins_([20,0,0,0]),
-			)
-		);
+		GranulatorMasterUI.getMasterLayout,
+		HLayout(
+			granulatorUI1.getLayout.margins_([20,0,0,0]),
+			granulatorUI2.getLayout.margins_([20,0,0,0]),
+			granulatorUI3.getLayout.margins_([20,0,0,0]),
+		)
+	);
 
 	~gwin.front;
 	~gwin.alwaysOnTop_(true);
@@ -135,7 +138,7 @@ s.waitForBoot({
 // [*] Disable Synth On/Off button till Audio devices are ready
 // [*] Sync GRanulator outputs (check dry/wet logic)
 // [*] Add tempo slider in Master
-// [ ] Add Sync slider/button
+// [*] Add Sync slider/button
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
 
