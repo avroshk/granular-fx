@@ -40,3 +40,7 @@ Perform this step once everytime `granularFXClasses.sc` is updated.
   var outDevice = "Built-in Output";
   ```
   * The input and output devices specified above should operate on same sample rates. You can check `Audio MIDI Setup` to verify this.
+
+### More reference material 
+*
+https://pustota.basislager.org/_/sc-help/Help/Tutorials/Buffer_Granulation.html
