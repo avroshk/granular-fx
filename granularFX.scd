@@ -23,78 +23,84 @@ s.options.outDevice = outDevice;
 s.waitForBoot({
 	var inBus=0, outBus=0;
 	var bufferLength=5;
-	var granulatorUI1, granulatorUI2, granulatorUI3;
-	var gSynth1, gSynth2, gSynth3;
+	var granulatorUIs, gSynths;
 	var setUp, tearDown, gSetup;
+	var paramsStore;
 
-	// Initialize granulators
-	granulatorUI1 = GranulatorUI("Granulator1");
-	granulatorUI2 = GranulatorUI("Granulator2");
-	granulatorUI3 = GranulatorUI("Granulator3");
-	granulatorUI1.init;
-	granulatorUI2.init;
-	granulatorUI3.init;
+	// Synth Defaults
+	var defaultMasterGainValue = 0.8,
+	defaultMasterMixValue = 0,
+	defaultMasterTempoValue = 120,
+	defaultGainValue = 0.75,
+	defaultGrainDensityValue = 8,
+	defaultGrainSizeValue = 0.05,
+	defaultDelayValue = 0.1,
+	defaultPitchValue = 0,
+	defaultStereoWidthValue = 0;
+
+	// Other UI Defaults
+	var defaultOnState = 0,
+	defaultSyncMode = 0;
+
+
+	var granulators = ["Granulator1", "Granulator2", "Granulator3"];
+
+	// Initialize Parameter store
+	paramsStore = GranulatorParameterStore.new;
+	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "");
+	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "");
+	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm");
+
+	// Initialize parameters for each granulator
+	granulators.do({
+		arg title, i;
+		var id = "G%".format(i).asSymbol;
+
+		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "");
+		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec");
+		paramsStore.addParam(\GrainSize, id, 0.01, 1, 0.01, defaultGrainSizeValue, "sec");
+		paramsStore.addParam(\GrainDelay, id, 0.01, 1, 0.01, defaultDelayValue, "sec");
+		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones");
+		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "");
+
+		paramsStore.addParam(\OnState, id, 0, 1, 1, defaultOnState, "");
+		paramsStore.addParam(\SyncMode, id, 0, 1, 1, defaultSyncMode, "");
+	});
+
+	granulatorUIs = granulators.collect {|title, i| GranulatorUI("G%".format(i).asSymbol, title, paramsStore) };
+	granulatorUIs.do(_.init);
 
 	setUp = {
 
 		// Create Buses & Groups to manage the signal chain
-		gSetup = GranulatorSetup.new(s, bufferLength, inBus, outBus);
+		gSetup = GranulatorSetup.new(s, bufferLength, paramsStore, inBus, outBus);
 		gSetup.init;
 
-		gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
-		gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
-		gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
+		// gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
+		// gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
+		// gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
 
-		gSynth1 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
-		gSynth2 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
-		gSynth3 = GranulatorSynth.new(s, \granularfx, gSetup.buffer, gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp);
-		gSynth1.init;
-		gSynth2.init;
-		gSynth3.init;
+		gSynths = granulators.collect {
+			|title, i|
+			GranulatorSynth.new(
+				s,
+				"G%".format(i).asSymbol,
+				\granularfx,
+				gSetup.buffer,
+				gSetup.ptrBus,
+				gSetup.masterBus,
+				gSetup.grainGrp,
+				paramsStore)
+		};
+		gSynths.do(_.init);
 
-		gSynth1.setOnButtonAction(granulatorUI1);
-		gSynth2.setOnButtonAction(granulatorUI2);
-		gSynth3.setOnButtonAction(granulatorUI3);
-
-		gSynth1.setGainAction(granulatorUI1.cSpecGain, granulatorUI1.sliderGain, granulatorUI1.nbGain);
-		gSynth1.setGrainDensityAction(granulatorUI1.cSpecGrainDensity, granulatorUI1.sliderGrainDensity, granulatorUI1.nbGrainDensity);
-		gSynth1.setGrainSizeAction(granulatorUI1.cSpecGrainSize, granulatorUI1.sliderGrainSize, granulatorUI1.nbGrainSize);
-		gSynth1.setDelayAction(granulatorUI1.cSpecDelay, granulatorUI1.sliderDelay, granulatorUI1.nbDelay);
-		gSynth1.setPitchAction(granulatorUI1.cSpecPitch, granulatorUI1.sliderPitch, granulatorUI1.nbPitch);
-		gSynth1.setStereoWidthAction(granulatorUI1.cSpecStereoWidth, granulatorUI1.sliderStereoWidth, granulatorUI1.nbStereoWidth);
-
-		gSynth2.setGainAction(granulatorUI2.cSpecGain, granulatorUI2.sliderGain, granulatorUI2.nbGain);
-		gSynth2.setGrainDensityAction(granulatorUI2.cSpecGrainDensity, granulatorUI2.sliderGrainDensity, granulatorUI2.nbGrainDensity);
-		gSynth2.setGrainSizeAction(granulatorUI2.cSpecGrainSize, granulatorUI2.sliderGrainSize, granulatorUI2.nbGrainSize);
-		gSynth2.setDelayAction(granulatorUI2.cSpecDelay, granulatorUI2.sliderDelay, granulatorUI2.nbDelay);
-		gSynth2.setPitchAction(granulatorUI2.cSpecPitch, granulatorUI2.sliderPitch, granulatorUI2.nbPitch);
-		gSynth2.setStereoWidthAction(granulatorUI2.cSpecStereoWidth, granulatorUI2.sliderStereoWidth, granulatorUI2.nbStereoWidth);
-
-		gSynth3.setGainAction(granulatorUI3.cSpecGain, granulatorUI3.sliderGain, granulatorUI3.nbGain);
-		gSynth3.setGrainDensityAction(granulatorUI3.cSpecGrainDensity, granulatorUI3.sliderGrainDensity, granulatorUI3.nbGrainDensity);
-		gSynth3.setGrainSizeAction(granulatorUI3.cSpecGrainSize, granulatorUI3.sliderGrainSize, granulatorUI3.nbGrainSize);
-		gSynth3.setDelayAction(granulatorUI3.cSpecDelay, granulatorUI3.sliderDelay, granulatorUI3.nbDelay);
-		gSynth3.setPitchAction(granulatorUI3.cSpecPitch, granulatorUI3.sliderPitch, granulatorUI3.nbPitch);
-		gSynth3.setStereoWidthAction(granulatorUI3.cSpecStereoWidth, granulatorUI3.sliderStereoWidth, granulatorUI3.nbStereoWidth);
-
-		granulatorUI1.applySynthDefaults;
-		granulatorUI2.applySynthDefaults;
-		granulatorUI3.applySynthDefaults;
-
-		granulatorUI1.enableButton;
-		granulatorUI2.enableButton;
-		granulatorUI3.enableButton;
+		granulatorUIs.do(_.applySynthDefaults);
+		granulatorUIs.do(_.enableButton);
 	};
 
 	tearDown = {
-		granulatorUI1.disableButton;
-		granulatorUI2.disableButton;
-
-		granulatorUI3.disableButton;
-		granulatorUI1.turnOff;
-		granulatorUI2.turnOff;
-		granulatorUI3.turnOff;
-
+		granulatorUIs.do(_.disableButton);
+		granulatorUIs.do(_.turnOff);
 		gSetup.freeAll;
 	};
 
@@ -103,19 +109,16 @@ s.waitForBoot({
 	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 500)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
-	GranulatorMasterUI.masterInit(s, setUp, tearDown);
+	GranulatorMasterUI.masterInit(s, setUp, tearDown, paramsStore);
 	setUp.value;
 	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
 
-
 	~gwin.layout = HLayout(
-			GranulatorMasterUI.getMasterLayout,
-			HLayout(
-				granulatorUI1.getLayout.margins_([20,0,0,0]),
-				granulatorUI2.getLayout.margins_([20,0,0,0]),
-				granulatorUI3.getLayout.margins_([20,0,0,0]),
-			)
-		);
+		GranulatorMasterUI.getMasterLayout,
+		HLayout(
+			*granulatorUIs.collect {|gui| gui.getLayout.margins_([20,0,0,0])}
+		)
+	);
 
 	~gwin.front;
 	~gwin.alwaysOnTop_(true);
@@ -135,8 +138,14 @@ s.waitForBoot({
 // [*] Disable Synth On/Off button till Audio devices are ready
 // [*] Sync GRanulator outputs (check dry/wet logic)
 // [*] Add tempo slider in Master
-// [ ] Add Sync slider/button
+// [*] Add Sync slider/button
+// [*] Use OSC for handling parameters
+// [*] Use OSC for handling master parameters
+// [*] Use OSC for handling binary parameters
+// [ ] Initialize Synths settings from parameters
+// [ ] Disable Master controls till Audio devices are ready
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
+// [ ] Try replacing defer statements and using AppClock scheduling
 
 )
