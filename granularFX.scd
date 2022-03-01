@@ -35,6 +35,10 @@ s.waitForBoot({
 	defaultPitchValue = 0,
 	defaultStereoWidthValue = 0;
 
+	// Other UI Defaults
+	var defaultOnState = 0,
+	defaultSyncMode = 0;
+
 
 	var granulators = ["Granulator1", "Granulator2", "Granulator3"];
 
@@ -52,6 +56,9 @@ s.waitForBoot({
 		paramsStore.addParam(\GrainDelay, id, 0.01, 1, 0.01, defaultDelayValue, "sec");
 		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones");
 		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "");
+
+		paramsStore.addParam(\OnState, id, 0, 1, 1, defaultOnState, "");
+		paramsStore.addParam(\SyncMode, id, 0, 1, 1, defaultSyncMode, "");
 	});
 
 	granulatorUIs = granulators.collect {|title, i| GranulatorUI("G%".format(i).asSymbol, title, paramsStore) };
@@ -68,14 +75,7 @@ s.waitForBoot({
 		gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
 
 		gSynths = granulators.collect {|title, i| GranulatorSynth.new(s, "G%".format(i).asSymbol,\granularfx, gSetup.buffer,  gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp, paramsStore) };
-
-		gSynths.do({
-			arg gSynth, i;
-			var gui;
-			gSynth.init;
-			gui = granulatorUIs[i];
-			gSynth.setOnButtonAction(gui);
-		});
+		gSynths.do(_.init);
 
 		granulatorUIs.do(_.applySynthDefaults);
 		granulatorUIs.do(_.enableButton);
@@ -127,6 +127,9 @@ s.waitForBoot({
 // [*] Add tempo slider in Master
 // [*] Add Sync slider/button
 // [*] Use OSC for handling parameters
+// [ ] Use OSC for handling master parameters
+// [*] Use OSC for handling binary parameters
+// [ ] Initialize Synths settings from parameters
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
 // [ ] Try replacing defer statements and using AppClock scheduling
