@@ -76,10 +76,6 @@ s.waitForBoot({
 		gSetup = GranulatorSetup.new(s, bufferLength, paramsStore, inBus, outBus);
 		gSetup.init;
 
-		// gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
-		// gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
-		// gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
-
 		gSynths = granulators.collect {
 			|title, i|
 			GranulatorSynth.new(
