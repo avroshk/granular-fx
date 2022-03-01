@@ -28,7 +28,10 @@ s.waitForBoot({
 	var paramsStore;
 
 	// Synth Defaults
-	var defaultGainValue = 0.75,
+	var defaultMasterGainValue = 0.8,
+	defaultMasterMixValue = 0,
+	defaultMasterTempoValue = 120,
+	defaultGainValue = 0.75,
 	defaultGrainDensityValue = 8,
 	defaultGrainSizeValue = 0.05,
 	defaultDelayValue = 0.1,
@@ -44,6 +47,9 @@ s.waitForBoot({
 
 	// Initialize Parameter store
 	paramsStore = GranulatorParameterStore.new;
+	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "");
+	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "");
+	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm");
 
 	// Initialize parameters for each granulator
 	granulators.do({
@@ -67,14 +73,25 @@ s.waitForBoot({
 	setUp = {
 
 		// Create Buses & Groups to manage the signal chain
-		gSetup = GranulatorSetup.new(s, bufferLength, inBus, outBus);
+		gSetup = GranulatorSetup.new(s, bufferLength, paramsStore, inBus, outBus);
 		gSetup.init;
 
-		gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
-		gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
-		gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
+		// gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
+		// gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
+		// gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
 
-		gSynths = granulators.collect {|title, i| GranulatorSynth.new(s, "G%".format(i).asSymbol,\granularfx, gSetup.buffer,  gSetup.ptrBus, gSetup.masterBus, gSetup.grainGrp, paramsStore) };
+		gSynths = granulators.collect {
+			|title, i|
+			GranulatorSynth.new(
+				s,
+				"G%".format(i).asSymbol,
+				\granularfx,
+				gSetup.buffer,
+				gSetup.ptrBus,
+				gSetup.masterBus,
+				gSetup.grainGrp,
+				paramsStore)
+		};
 		gSynths.do(_.init);
 
 		granulatorUIs.do(_.applySynthDefaults);
@@ -84,7 +101,6 @@ s.waitForBoot({
 	tearDown = {
 		granulatorUIs.do(_.disableButton);
 		granulatorUIs.do(_.turnOff);
-
 		gSetup.freeAll;
 	};
 
@@ -93,17 +109,14 @@ s.waitForBoot({
 	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 500)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
-	GranulatorMasterUI.masterInit(s, setUp, tearDown);
+	GranulatorMasterUI.masterInit(s, setUp, tearDown, paramsStore);
 	setUp.value;
 	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
 
 	~gwin.layout = HLayout(
 		GranulatorMasterUI.getMasterLayout,
 		HLayout(
-			*granulatorUIs.collect({
-				arg gui;
-				gui.getLayout.margins_([20,0,0,0])
-			})
+			*granulatorUIs.collect {|gui| gui.getLayout.margins_([20,0,0,0])}
 		)
 	);
 
@@ -127,9 +140,10 @@ s.waitForBoot({
 // [*] Add tempo slider in Master
 // [*] Add Sync slider/button
 // [*] Use OSC for handling parameters
-// [ ] Use OSC for handling master parameters
+// [*] Use OSC for handling master parameters
 // [*] Use OSC for handling binary parameters
 // [ ] Initialize Synths settings from parameters
+// [ ] Disable Master controls till Audio devices are ready
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
 // [ ] Try replacing defer statements and using AppClock scheduling

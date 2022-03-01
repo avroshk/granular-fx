@@ -56,7 +56,7 @@ GranulatorPreferences {
 }
 
 GranulatorSetup {
-	var server, bufferLength;
+	var server, bufferLength, params;
 	var <buffer;
 	// Buses
 	var <micBus, <ptrBus, <masterBus;
@@ -70,9 +70,11 @@ GranulatorSetup {
 	// in/out Buses
 	var <inBus, <outBus;
 
+	var masterGainParam, masterMixParam, masterTempoParam;
+
 	*new {
-		arg server, bufferLength, inBus, outBus;
-		^super.newCopyArgs(server, bufferLength, inBus, outBus);
+		arg server, bufferLength, params, inBus, outBus;
+		^super.newCopyArgs(server, bufferLength, params, inBus, outBus);
 	}
 
 	init {
@@ -170,32 +172,41 @@ GranulatorSetup {
 		);
 
 		synthIDs = synths.collect(_.nodeID);
+
+		// Params
+		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
+		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
+		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
+
+		masterGainParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\gain, masterGainParam.get); }); });
+		masterMixParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\mix, masterMixParam.get); }); });
+		// masterTempoParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{  }); });
 	}
 
-	setMasterGainAction {
-		arg masterGainSlider;
-		masterGainSlider.action = {
-			arg l;
-			masterSynth.set(\gain, l.value);
-		};
-	}
+	// setMasterGainAction {
+	// 	arg masterGainSlider;
+	// 	masterGainSlider.action = {
+	// 		arg l;
+	// 		masterSynth.set(\gain, l.value);
+	// 	};
+	// }
+	//
+	// setMasterMixAction {
+	// 	arg masterMixSlider;
+	// 	masterMixSlider.action = {
+	// 		arg l;
+	// 		masterSynth.set(\mix, l.value);
+	// 	};
+	// }
 
-	setMasterMixAction {
-		arg masterMixSlider;
-		masterMixSlider.action = {
-			arg l;
-			masterSynth.set(\mix, l.value);
-		};
-	}
-
-	setMasterTempoAction {
-		arg cSpecTempo, sliderTempo, nbTempo;
-		sliderTempo.action = {
-			arg l;
-			var value = cSpecTempo.map(l.value);
-			nbTempo.value_(value);
-		};
-	}
+	// setMasterTempoAction {
+	// 	arg cSpecTempo, sliderTempo, nbTempo;
+	// 	sliderTempo.action = {
+	// 		arg l;
+	// 		var value = cSpecTempo.map(l.value);
+	// 		nbTempo.value_(value);
+	// 	};
+	// }
 
 	freeBuses {
 		buses.do(_.free);
@@ -350,22 +361,38 @@ GranulatorMasterUI {
 	inputDeviceLabel, outputDeviceLabel,
 	<masterGainSlider, masterGainText,
 	<masterMixSlider, masterMixText,
-	masterTempoLayout, <cSpecTempo, <masterTempoSlider, <nbTempo,
+	masterTempoLayout, masterTempoSlider, nbTempo,
 	inputDevicePopUp, outputDevicePopUp,
 	loadingText;
 
-	classvar defaultMasterGainValue = 0.8,
-	defaultMasterTempo = 120;
+	classvar masterGainParam, masterMixParam,
+	masterTempoParam;
 
 	*masterInit {
-		arg server, setUp, tearDown;
+		arg server, setUp, tearDown, params;
+
+		// Get params
+		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
+		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
+		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
+
 		pluginTitleLabel = StaticText().string_(pluginTitle).font_(Font("Helvetica",18, true));
 		inputDeviceLabel = StaticText().string_("Input Device").font_(Font("Helvetica", 14, bold:true));
 		outputDeviceLabel = StaticText().string_("Output Device").font_(Font("Helvetica", 14, bold:true));
 		masterLabel = StaticText().string_("Master").font_(Font("Helvetica", 16, bold:true));
-		masterGainSlider = Slider().value_(defaultMasterGainValue).orientation_(\vertical);
+		masterGainSlider = Slider().value_(masterGainParam.get)
+			.action_({
+				arg l;
+				masterGainParam.setRaw(l.value);
+			}).value_(masterGainParam.getRaw)
+			.orientation_(\vertical);
 		masterGainText = StaticText().string_("Gain").align_(\center);
-		masterMixSlider = Slider().orientation_(\vertical);
+		masterMixSlider = Slider().value_(masterMixParam.get)
+			.action_({
+				arg l;
+				masterMixParam.setRaw(l.value);
+			}).value_(masterMixParam.getRaw)
+			.orientation_(\vertical);
 		masterMixText = StaticText().string_("Dry/Wet").align_(\center);
 		loadingText = StaticText().align_(\center);
 		inputDevicePopUp = PopUpMenu().items_(ServerOptions.inDevices).font_(Font("Helvetica",12));
@@ -376,14 +403,19 @@ GranulatorMasterUI {
 				StaticText().string_("bpm").align_(\right),
 			),
 			HLayout(
-				cSpecTempo = ControlSpec(20,999,step:0.1);
-				masterTempoSlider = Slider().orientation_(\horizontal),
-				nbTempo = NumberBox().maxWidth_(40).action_({
-					arg v;
-					masterTempoSlider.valueAction = cSpecTempo.unmap(v.value);
-				}).valueAction_(defaultMasterTempo)
+				masterTempoSlider = Slider().orientation_(\horizontal)
+					.action_({
+						arg l;
+						masterTempoParam.setRaw(l.value);
+					}).value_(masterTempoParam.getRaw),
+					nbTempo = NumberBox().maxWidth_(40).action_({
+						arg v;
+						masterTempoParam.set(v.value);
+					}).value_(masterTempoParam.get)
 			)
 		);
+		masterTempoParam.addListenerOnRaw(\WatchSlider, { AppClock.sched(0,{ nbTempo.value = masterTempoParam.get; }); });
+		masterTempoParam.addListener(\WatchNb, { AppClock.sched(0,{ masterTempoSlider.value = masterTempoParam.getRaw; }); });
 
 		GranulatorPreferences.initClass;
 
