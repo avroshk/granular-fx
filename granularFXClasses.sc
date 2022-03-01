@@ -107,6 +107,7 @@ GranulatorSetup {
 		groupIDs = groups.collect(_.nodeID);
 
 		this.initUGens;
+
 		// Wait 0.1s after SynthDefs are created
 		{this.createSynths}.defer(0.1);
 	}
@@ -224,16 +225,20 @@ GranulatorSetup {
 }
 
 GranulatorSynth {
-	var server, synthfxname, buffer, ptrBus, outBus, grainGrp;
+	var server, synthId, synthfxname, buffer, ptrBus, outBus, grainGrp, params;
 	var synthfx;
 
+	var gainParam;
+
 	*new {
-		arg server, synthfxname, buffer, ptrBus, outBus, grainGrp;
-		^super.newCopyArgs(server, synthfxname, buffer, ptrBus, outBus, grainGrp)
+		arg server, synthId, synthfxname, buffer, ptrBus, outBus, grainGrp, params;
+		^super.newCopyArgs(server, synthId, synthfxname, buffer, ptrBus, outBus, grainGrp, params)
 	}
 
 	init {
 		this.initUGens;
+		gainParam = params.getParam("%%".format(\Gain, synthId).asSymbol);
+		gainParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\amp, gainParam.get); }); })
 	}
 
 	initUGens {
@@ -325,16 +330,6 @@ GranulatorSynth {
 				synthfx.free;
 				gui.disableElements;
 			}
-		};
-	}
-
-	setGainAction {
-		arg cSpecGain, sliderGain, nbGain;
-		sliderGain.action = {
-			arg l;
-			var value = cSpecGain.map(l.value);
-			nbGain.value_(value);
-			synthfx.set(\amp, l.value);
 		};
 	}
 
@@ -570,9 +565,9 @@ GranulatorMasterUI {
 }
 
 GranulatorUI {
-	var <title;
+	var id, <title, params;
 	var titleLabel, <onButton, <syncButton,
-	gainLayout, <cSpecGain, <sliderGain, <nbGain,
+	gainLayout, sliderGain, nbGain, gainParam,
 	grainDensityLayout, <cSpecGrainDensity, <sliderGrainDensity, <nbGrainDensity,
 	grainSizeLayout, <cSpecGrainSize, <sliderGrainSize, <nbGrainSize,
 	delayLayout, <cSpecDelay, <sliderDelay, <nbDelay,
@@ -580,7 +575,7 @@ GranulatorUI {
 	stereoWidthLayout, <cSpecStereoWidth, <sliderStereoWidth, <nbStereoWidth;
 
 	// Synth Defaults
-	var defaultGainValue = 1.0,
+	var defaultGainValue = 0.75,
 	defaultGrainDensityValue = 8,
 	defaultGrainSizeValue = 0.05,
 	defaultDelayValue = 0.1,
@@ -588,11 +583,13 @@ GranulatorUI {
 	defaultStereoWidthValue = 0;
 
    	*new {
-		arg title;
-	   	^super.newCopyArgs(title)
+		arg id, title, params;
+	   	^super.newCopyArgs(id, title, params)
    	}
 
 	init {
+		gainParam = params.getParam("%%".format(\Gain, id).asSymbol);
+
 		titleLabel = StaticText().string_(title).font_(Font("Helvetica", 16, bold:true));
 
 		onButton = Button()
@@ -615,14 +612,18 @@ GranulatorUI {
 				StaticText().string_("").align_(\right),
 			),
 			HLayout(
-				cSpecGain = ControlSpec(0,1,step:0.1);
-				sliderGain = Slider().orientation_(\horizontal),
+				sliderGain = Slider().orientation_(\horizontal).action_({
+					arg l;
+					gainParam.setRaw(l.value);
+				}).value_(gainParam.get),
 				nbGain = NumberBox().maxWidth_(40).action_({
 					arg v;
-					sliderGain.valueAction = v.value;
-				}).valueAction_(defaultGainValue)
+					gainParam.set(v.value);
+				}).value_(gainParam.get)
 			)
 		);
+		gainParam.addListenerOnRaw(\WatchSlider, { AppClock.sched(0,{ nbGain.value = gainParam.get; }); });
+		gainParam.addListener(\WatchNb, { AppClock.sched(0,{ sliderGain.value = gainParam.getRaw; }); });
 
 		grainDensityLayout = HLayout(
 			VLayout(
@@ -798,7 +799,7 @@ GranulatorUI {
 
 GranulatorParam {
 	var name, id, minValue, maxValue, step,
-	default, units;
+	default, units, listeners;
 
 	var value, cSpec;
 	var <setDefName, <setRawDefName,
@@ -810,7 +811,7 @@ GranulatorParam {
 
 	*new {
 		arg name, id, minValue, maxValue, step, default, units;
-		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units)
+		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units, []);
 	}
 
 	init {
@@ -835,11 +836,6 @@ GranulatorParam {
 		this.broadcast;
 	}
 
-	prepareOSCComm {
-		OSCdef(setDefName, defaultAction, setPathName, net);
-		OSCdef(setRawDefName, defaultRawValueAction, setRawPathName, net);
-	}
-
 	broadcast {
 		net.sendMsg(broadcastOscPathName, this.get);
 		net.sendMsg(broadcastRawOscPathName, this.getRaw);
@@ -861,38 +857,78 @@ GranulatorParam {
 	getRaw { ^value }
 	getBounds { ^[minValue, maxValue] }
 
-	setAction {
+	// Setup listeners
+	addListener {
+		arg listenerId, action;
+		var defName = "%%%".format(listenerId, name, id).asSymbol;
+		OSCdef(defName, action, broadcastOscPathName);
+		listeners.add(defName);
+	}
+
+	addListenerOnRaw {
+		arg listenerId, action;
+		var defName = "%%%".format(listenerId, name, id).asSymbol;
+		OSCdef(defName, action, broadcastRawOscPathName);
+		listeners.add(defName);
+	}
+
+	clearListeners {
+		listeners.do({
+			arg item;
+			OSCdef(item).free;
+		});
+		listeners = [];
+	}
+
+	// Set parameter using OSC messages
+	prepareOSCComm {
+		OSCdef(setDefName, defaultAction, setPathName, net);
+		OSCdef(setRawDefName, defaultRawValueAction, setRawPathName, net);
+	}
+
+	addAction {
 		arg action;
 		OSCdef(setDefName).add(action);
 	}
-	setRawAction {
+	addRawAction {
 		arg action;
 		OSCdef(setRawDefName).add(action);
+	}
+
+	resetActions {
+		this.clearActions;
+		this.prepareOSCComm;
 	}
 
 	clearActions {
 		OSCdef(setDefName).free;
 		OSCdef(setRawDefName).free;
-		this.prepareOSCComm;
 	}
 }
 
 GranulatorParameterStore {
-	classvar params;
+	var <params;
 
-	*init {
-		params = ();
+	*new {
+		^super.newCopyArgs(())
 	}
 
-	*addParam {
+	addParam {
 		arg name, id, minValue, maxValue, step, default, units;
 		var uniqueId = "%%".format(name, id).asSymbol;
 		var param = GranulatorParam.new(name, id, minValue, maxValue, step, default, units);
 		param.init.value;
 		params.put(uniqueId, param);
+		^param
 	}
 
-	*getParams {
-		^params
+	getParam {
+		arg key;
+		^params.at(key)
+	}
+
+	clear {
+		params.do(_.clearActions);
+		params = ();
 	}
 }
