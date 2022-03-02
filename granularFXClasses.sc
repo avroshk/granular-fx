@@ -567,15 +567,6 @@ GranulatorUI {
 	pitchLayout, sliderPitch, nbPitch, pitchParam,
 	stereoWidthLayout, sliderStereoWidth, nbStereoWidth, stereoWidthParam;
 
-	// Synth Defaults
-	var defaultGainValue = 0.75,
-	defaultGrainDensityValue = 8,
-	defaultGrainSizeValue = 0.05,
-	defaultDelayValue = 0.1,
-	defaultPitchValue = 0,
-	defaultStereoWidthValue = 0,
-	defaultSyncMode = 0;
-
    	*new {
 		arg id, title, params;
 	   	^super.newCopyArgs(id, title, params)
@@ -591,7 +582,6 @@ GranulatorUI {
 
 		onStateParam = params.getParam("%%".format(\OnState, id).asSymbol);
 		syncModeParam = params.getParam("%%".format(\SyncMode, id).asSymbol);
-
 
 		titleLabel = StaticText().string_(title).font_(Font("Helvetica", 16, bold:true));
 
@@ -824,16 +814,6 @@ GranulatorUI {
 		nbPitch.enabled_(1);
 		sliderStereoWidth.enabled_(1);
 		nbStereoWidth.enabled_(1);
-	}
-
-	applySynthDefaults {
-		nbGain.valueAction_(defaultGainValue);
-		nbGrainSize.valueAction_(defaultGrainSizeValue);
-		nbGrainDensity.valueAction_(defaultGrainDensityValue);
-		nbDelay.valueAction_(defaultDelayValue);
-		nbPitch.valueAction_(defaultPitchValue);
-		nbStereoWidth.valueAction_(defaultStereoWidthValue);
-		syncButton.valueAction_(defaultSyncMode);
 	}
 }
 

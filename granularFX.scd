@@ -89,8 +89,6 @@ s.waitForBoot({
 				paramsStore)
 		};
 		gSynths.do(_.init);
-
-		granulatorUIs.do(_.applySynthDefaults);
 		granulatorUIs.do(_.enableButton);
 	};
 
