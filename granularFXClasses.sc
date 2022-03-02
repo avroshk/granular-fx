@@ -159,10 +159,25 @@ GranulatorSetup {
 	}
 
 	createSynths {
+		// Params
+		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
+		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
+		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
+
+		masterGainParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\gain, masterGainParam.get); }); });
+		masterMixParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\mix, masterMixParam.get); }); });
+		// masterTempoParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{  }); });
+
 		micSynth = Synth(\mic, [\in, inBus, \out, micBus], micGrp);
 		ptrSynth = Synth(\ptr, [\buf, buffer, \out, ptrBus], ptrGrp);
 		recSynth = Synth(\rec, [\ptrIn, ptrBus, \micIn, micBus, \buf, buffer], recGrp);
-		masterSynth = Synth(\master, [\dryIn, micBus, \wetIn, masterBus, \out, outBus], masterGrp);
+		masterSynth = Synth(\master, [
+			\dryIn, micBus,
+			\wetIn, masterBus,
+			\out, outBus,
+			\gain, masterGainParam.get,
+			\mix, masterMixParam.get
+		], masterGrp);
 
 		synths = (
 			\mic: micSynth,
@@ -172,41 +187,7 @@ GranulatorSetup {
 		);
 
 		synthIDs = synths.collect(_.nodeID);
-
-		// Params
-		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
-		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
-		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
-
-		masterGainParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\gain, masterGainParam.get); }); });
-		masterMixParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\mix, masterMixParam.get); }); });
-		// masterTempoParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{  }); });
 	}
-
-	// setMasterGainAction {
-	// 	arg masterGainSlider;
-	// 	masterGainSlider.action = {
-	// 		arg l;
-	// 		masterSynth.set(\gain, l.value);
-	// 	};
-	// }
-	//
-	// setMasterMixAction {
-	// 	arg masterMixSlider;
-	// 	masterMixSlider.action = {
-	// 		arg l;
-	// 		masterSynth.set(\mix, l.value);
-	// 	};
-	// }
-
-	// setMasterTempoAction {
-	// 	arg cSpecTempo, sliderTempo, nbTempo;
-	// 	sliderTempo.action = {
-	// 		arg l;
-	// 		var value = cSpecTempo.map(l.value);
-	// 		nbTempo.value_(value);
-	// 	};
-	// }
 
 	freeBuses {
 		buses.do(_.free);
@@ -356,7 +337,7 @@ GranulatorSynth {
 
 GranulatorMasterUI {
 	// master layout
-	classvar server, pluginTitle = "granularFX";
+	classvar server, pluginTitle, version;
 	classvar pluginTitleLabel, masterLabel,
 	inputDeviceLabel, outputDeviceLabel,
 	<masterGainSlider, masterGainText,
@@ -369,7 +350,7 @@ GranulatorMasterUI {
 	masterTempoParam;
 
 	*masterInit {
-		arg server, setUp, tearDown, params;
+		arg server, pluginTitle, version, setUp, tearDown, params;
 
 		// Get params
 		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
@@ -422,13 +403,13 @@ GranulatorMasterUI {
 		inputDevicePopUp.action = {
 			arg c;
 			this.setInputDevice(server, c.item);
-			this.runBootSequence(server, setUp, tearDown);
+			{this.runBootSequence(server, setUp, tearDown)}.defer(0.1);
 		};
 
 		outputDevicePopUp.action = {
 			arg c;
 			this.setOutputDevice(server, c.item);
-			this.runBootSequence(server, setUp, tearDown);
+			{this.runBootSequence(server, setUp, tearDown)}.defer(0.1);
 		};
 	}
 
@@ -444,6 +425,7 @@ GranulatorMasterUI {
 	*runBootSequence {
 		arg server, setUp, tearDown;
 
+		this.disableElements;
 		loadingText.string_("Setting up audio device...");
 		tearDown.value;
 		server.reboot();
@@ -451,6 +433,7 @@ GranulatorMasterUI {
 			onComplete: {
 				setUp.value;
 				loadingText.string_("Ready!");
+				this.enableElements;
 				1.wait;
 				loadingText.string_("");
 			},
@@ -552,6 +535,18 @@ GranulatorMasterUI {
 				)
 			).margins_([0,20,0,0])
 		)
+	}
+
+	*disableElements {
+		masterGainSlider.enabled_(0);
+		masterMixSlider.enabled_(0);
+		masterTempoSlider.enabled_(0);
+	}
+
+	*enableElements {
+		masterGainSlider.enabled_(1);
+		masterMixSlider.enabled_(1);
+		masterTempoSlider.enabled_(1);
 	}
 }
 

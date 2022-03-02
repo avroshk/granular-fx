@@ -42,7 +42,6 @@ s.waitForBoot({
 	var defaultOnState = 0,
 	defaultSyncMode = 0;
 
-
 	var granulators = ["Granulator1", "Granulator2", "Granulator3"];
 
 	// Initialize Parameter store
@@ -67,11 +66,11 @@ s.waitForBoot({
 		paramsStore.addParam(\SyncMode, id, 0, 1, 1, defaultSyncMode, "");
 	});
 
+	// Initialize Granulator UIs
 	granulatorUIs = granulators.collect {|title, i| GranulatorUI("G%".format(i).asSymbol, title, paramsStore) };
 	granulatorUIs.do(_.init);
 
 	setUp = {
-
 		// Create Buses & Groups to manage the signal chain
 		gSetup = GranulatorSetup.new(s, bufferLength, paramsStore, inBus, outBus);
 		gSetup.init;
@@ -103,7 +102,9 @@ s.waitForBoot({
 	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 500)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
-	GranulatorMasterUI.masterInit(s, setUp, tearDown, paramsStore);
+	// Initialize Master UI
+	GranulatorMasterUI.masterInit(s, "granularFX", "0.0.1", setUp, tearDown, paramsStore);
+
 	setUp.value;
 	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
 
@@ -120,6 +121,7 @@ s.waitForBoot({
 		tearDown.value;
 	});
 	CmdPeriod.doOnce({~gwin.close});
+	s.plotTree;
 });
 
 // [*] 1 Separate Synth elements from UI elements
@@ -136,8 +138,8 @@ s.waitForBoot({
 // [*] Use OSC for handling parameters
 // [*] Use OSC for handling master parameters
 // [*] Use OSC for handling binary parameters
-// [ ] Initialize Synths settings from parameters
-// [ ] Disable Master controls till Audio devices are ready
+// [*] Initialize Synths settings from parameters
+// [*] Disable Master controls till Audio devices are ready
 // [ ] Update Slider units based on Sync option
 // [ ] Persist Slider parameters
 // [ ] Try replacing defer statements and using AppClock scheduling
