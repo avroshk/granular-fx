@@ -23,7 +23,7 @@ s.options.outDevice = outDevice;
 s.waitForBoot({
 	var inBus=0, outBus=0;
 	var bufferLength=5;
-	var granulatorUIs, gSynths;
+	var masterUI, granulatorUIs, gSynths;
 	var setUp, tearDown, gSetup;
 	var paramsStore;
 
@@ -34,13 +34,13 @@ s.waitForBoot({
 	defaultGainValue = 0.75,
 	defaultGrainDensityValue = 8,
 	defaultGrainSizeValue = 0.05,
-	defaultDelayValue = 0.1,
+	defaultDelayValue = 0,
 	defaultPitchValue = 0,
 	defaultStereoWidthValue = 0;
 
 	// Other UI Defaults
 	var defaultOnState = 0,
-	defaultSyncMode = 0;
+	defaultSyncMode = 1;
 
 	var granulators = ["Granulator1", "Granulator2", "Granulator3"];
 
@@ -58,7 +58,7 @@ s.waitForBoot({
 		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "");
 		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec");
 		paramsStore.addParam(\GrainSize, id, 0.01, 1, 0.01, defaultGrainSizeValue, "sec");
-		paramsStore.addParam(\GrainDelay, id, 0.01, 1, 0.01, defaultDelayValue, "sec");
+		paramsStore.addParam(\GrainDelay, id, 0, 1, 0.01, defaultDelayValue, "sec");
 		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones");
 		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "");
 
@@ -69,6 +69,9 @@ s.waitForBoot({
 	// Initialize Granulator UIs
 	granulatorUIs = granulators.collect {|title, i| GranulatorUI("G%".format(i).asSymbol, title, paramsStore) };
 	granulatorUIs.do(_.init);
+
+	// Initialize Master UI
+	masterUI = GranulatorMasterUI.new(s, "granularFX", "0.0.1", paramsStore);
 
 	setUp = {
 		// Create Buses & Groups to manage the signal chain
@@ -102,14 +105,12 @@ s.waitForBoot({
 	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 500)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
-	// Initialize Master UI
-	GranulatorMasterUI.masterInit(s, "granularFX", "0.0.1", setUp, tearDown, paramsStore);
-
+	masterUI.init(setUp, tearDown);
 	setUp.value;
-	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
+	masterUI.refreshAudioDevices(setUp, tearDown);
 
 	~gwin.layout = HLayout(
-		GranulatorMasterUI.getMasterLayout,
+		masterUI.getMasterLayout,
 		HLayout(
 			*granulatorUIs.collect {|gui| gui.getLayout.margins_([20,0,0,0])}
 		)
@@ -121,7 +122,6 @@ s.waitForBoot({
 		tearDown.value;
 	});
 	CmdPeriod.doOnce({~gwin.close});
-	s.plotTree;
 });
 
 // [*] 1 Separate Synth elements from UI elements
@@ -141,7 +141,9 @@ s.waitForBoot({
 // [*] Initialize Synths settings from parameters
 // [*] Disable Master controls till Audio devices are ready
 // [ ] Update Slider units based on Sync option
+// [ ] Convert grain density unit grains/sec to grains/beat
 // [ ] Persist Slider parameters
-// [ ] Try replacing defer statements and using AppClock scheduling
+// [ ] Try replacing defer statements and use AppClock for scheduling/
+
 
 )
