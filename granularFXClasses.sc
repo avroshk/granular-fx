@@ -297,10 +297,16 @@ GranulatorSynth {
 				}
 			});
 		});
-		syncModeParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\sync, syncModeParam.get); }); });
+		syncModeParam.addListener(\UpdateSynth, {
+			AppClock.sched(0,{
+				// Let's stick with Trigger instead of Random Dust
+				// synthfx.set(\sync, syncModeParam.get);
+				masterTempoParam.set(masterTempoParam.get);
+			});
+		});
 		masterTempoParam.addListener("%%".format("UpdateSynth", synthId).asSymbol, {
-			AppClock.sched(0.0,{
-				if ((syncModeParam.get == 1) && (onStateParam.get == 0)) {
+			AppClock.sched(0.0, {
+				if (onStateParam.get == 0) {
 					synthfx.set(\dens, this.calcGrainDensity);
 					synthfx.set(\baseDur, this.calcGrainSize);
 					synthfx.set(\ptrSampleDelay, this.calcDelay);
@@ -318,7 +324,7 @@ GranulatorSynth {
 
 	calcGrainSize { ^(grainSizeParam.get*this.getBeatsPerSecond)/1000 }
 
-	calcDelay { ^server.sampleRate*delayParam.get*this.getBeatsPerSecond }
+	calcDelay { ^server.sampleRate*delayParam.get*this.getBeatsPerSecond/1000 }
 
 	getBeatsPerSecond {
 		var bps;
@@ -430,21 +436,21 @@ GranulatorMasterUI {
 				masterGainParam.setRaw(l.value);
 			}).value_(masterGainParam.getRaw)
 			.orientation_(\vertical);
-		masterGainText = StaticText().string_("Gain").align_(\center);
+		masterGainText = StaticText().string_(masterGainParam.title).align_(\center);
 		masterMixSlider = Slider().value_(masterMixParam.get)
 			.action_({
 				arg l;
 				masterMixParam.setRaw(l.value);
 			}).value_(masterMixParam.getRaw)
 			.orientation_(\vertical);
-		masterMixText = StaticText().string_("Dry/Wet").align_(\center);
+		masterMixText = StaticText().string_(masterMixParam.title).align_(\center);
 		loadingText = StaticText().align_(\center);
 		inputDevicePopUp = PopUpMenu().items_(ServerOptions.inDevices).font_(Font("Helvetica",12));
 		outputDevicePopUp = PopUpMenu().items_(ServerOptions.outDevices).font_(Font("Helvetica",12));
 		masterTempoLayout = VLayout(
 			HLayout(
-				StaticText().string_("Tempo"),
-				StaticText().string_("bpm").align_(\right),
+				StaticText().string_(masterTempoParam.title),
+				StaticText().string_(masterTempoParam.units).align_(\right),
 			),
 			HLayout(
 				masterTempoSlider = Slider().orientation_(\horizontal)
@@ -621,6 +627,7 @@ GranulatorUI {
 	reverseButton, reverseParam,
 	gainLayout, sliderGain, nbGain, gainParam,
 	grainDensityLayout, grainDensityUnitLabel, sliderGrainDensity, nbGrainDensity, grainDensityParam,
+	grainDensitySyncedLayout, grainDensitySyncedParam,
 	grainSizeLayout, grainSizeUnitLabel, sliderGrainSize, nbGrainSize, grainSizeParam, grainSizeParam,
 	delayLayout, delayUnitLabel, sliderDelay, nbDelay, delayParam,
 	pitchLayout, sliderPitch, nbPitch, pitchParam,
@@ -634,6 +641,7 @@ GranulatorUI {
 	init {
 		gainParam = params.getParam("%%".format(\Gain, id).asSymbol);
 		grainDensityParam = params.getParam("%%".format(\GrainDensity, id).asSymbol);
+		grainDensitySyncedParam = params.getParam("%%".format(\GrainDensitySynced, id).asSymbol);
 		grainSizeParam = params.getParam("%%".format(\GrainSize, id).asSymbol);
 		delayParam = params.getParam("%%".format(\GrainDelay, id).asSymbol);
 		pitchParam = params.getParam("%%".format(\GrainPitch, id).asSymbol);
@@ -689,7 +697,7 @@ GranulatorUI {
 
 		gainLayout = VLayout(
 			HLayout(
-				StaticText().string_("Gain"),
+				StaticText().string_(gainParam.title),
 				StaticText().string_(gainParam.units).align_(\right),
 			),
 			HLayout(
@@ -709,7 +717,7 @@ GranulatorUI {
 		grainDensityLayout = HLayout(
 			VLayout(
 				HLayout(
-					StaticText().string_("Grain Density"),
+					StaticText().string_(grainDensityParam.title),
 					grainDensityUnitLabel = StaticText().string_(grainDensityParam.units).align_(\right),
 				),
 				HLayout(
@@ -727,9 +735,11 @@ GranulatorUI {
 		grainDensityParam.addListenerOnRaw(\WatchSlider, { AppClock.sched(0,{ nbGrainDensity.value = grainDensityParam.get; }); });
 		grainDensityParam.addListener(\WatchNb, { AppClock.sched(0,{ sliderGrainDensity.value = grainDensityParam.getRaw; }); });
 
+		// grainDensitySyncedLayout = HLayout()
+
 		grainSizeLayout = VLayout(
 			HLayout(
-				StaticText().string_("Grain Size"),
+				StaticText().string_(grainSizeParam.title),
 				grainSizeUnitLabel = StaticText().string_(grainSizeParam.units).align_(\right),
 			),
 			HLayout(
@@ -748,7 +758,7 @@ GranulatorUI {
 
 		delayLayout = VLayout(
 			HLayout(
-				StaticText().string_("Start position delay"),
+				StaticText().string_(delayParam.title),
 				delayUnitLabel = StaticText().string_(delayParam.units).align_(\right),
 			),
 			HLayout(
@@ -767,7 +777,7 @@ GranulatorUI {
 
 		pitchLayout = VLayout(
 			HLayout(
-				StaticText().string_("Pitch"),
+				StaticText().string_(pitchParam.title),
 				StaticText().string_(pitchParam.units).align_(\right),
 			),
 			HLayout(
@@ -786,7 +796,7 @@ GranulatorUI {
 
 		stereoWidthLayout = VLayout(
 			HLayout(
-				StaticText().string_("Width (stereo)"),
+				StaticText().string_(stereoWidthParam.title),
 				StaticText().string_(stereoWidthParam.units).align_(\right),
 			),
 			HLayout(
@@ -915,7 +925,7 @@ GranulatorUI {
 
 GranulatorParam {
 	var name, id, minValue, maxValue, step,
-	default, units, listeners;
+	default, units, <title, listeners;
 
 	var value, cSpec;
 	var <setDefName, <setRawDefName,
@@ -926,8 +936,8 @@ GranulatorParam {
 	classvar net;
 
 	*new {
-		arg name, id, minValue, maxValue, step, default, units;
-		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units, []);
+		arg name, id, minValue, maxValue, step, default, units, title;
+		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units, title, []);
 	}
 
 	init {
@@ -1038,9 +1048,9 @@ GranulatorParameterStore {
 	}
 
 	addParam {
-		arg name, id, minValue, maxValue, step, default, units;
+		arg name, id, minValue, maxValue, step, default, units, title;
 		var uniqueId = "%%".format(name, id).asSymbol;
-		var param = GranulatorParam.new(name, id, minValue, maxValue, step, default, units);
+		var param = GranulatorParam.new(name, id, minValue, maxValue, step, default, units, title);
 		param.init.value;
 		params.put(uniqueId, param);
 		^param

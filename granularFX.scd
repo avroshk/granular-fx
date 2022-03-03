@@ -33,6 +33,7 @@ s.waitForBoot({
 	defaultMasterTempoValue = 120,
 	defaultGainValue = 0.75,
 	defaultGrainDensityValue = 4,
+	defaultGrainDensitySyncedValue = 4,
 	defaultGrainSizeValue = 20,
 	defaultDelayValue = 0,
 	defaultPitchValue = 0,
@@ -47,21 +48,22 @@ s.waitForBoot({
 
 	// Initialize Parameter store
 	paramsStore = GranulatorParameterStore.new;
-	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "");
-	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "");
-	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm");
+	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "", "Gain");
+	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "", "Dry/Wet");
+	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm", "Tempo");
 
 	// Initialize parameters for each granulator
 	granulators.do({
 		arg title, i;
 		var id = "G%".format(i).asSymbol;
 
-		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "");
-		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec");
-		paramsStore.addParam(\GrainSize, id, 0.01, 1000, 0.01, defaultGrainSizeValue, "milliseconds");
-		paramsStore.addParam(\GrainDelay, id, 0, 1, 0.01, defaultDelayValue, "sec");
-		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones");
-		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "");
+		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "", "Gain");
+		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec", "Grain Density");
+		paramsStore.addParam(\GrainDensitySynced, id, 0, 20, 1, defaultGrainDensitySyncedValue, "grains/beat", "Grain Density");
+		paramsStore.addParam(\GrainSize, id, 0.01, 1000, 0.01, defaultGrainSizeValue, "milliseconds", "Grain Size");
+		paramsStore.addParam(\GrainDelay, id, 0, 1000, 0.01, defaultDelayValue, "milliseconds", "Grain Delay");
+		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones", "Pitch");
+		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "", "Pan");
 
 		paramsStore.addParam(\OnState, id, 0, 1, 1, defaultOnState, "");
 		paramsStore.addParam(\SyncMode, id, 0, 1, 1, defaultSyncMode, "");
