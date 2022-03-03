@@ -979,6 +979,12 @@ GranulatorParam {
 		OSCdef(setDefName).free;
 		OSCdef(setRawDefName).free;
 	}
+
+	remove {
+		this.clearListeners;
+		this.resetActions;
+		net.disconnect;
+	}
 }
 
 GranulatorParameterStore {

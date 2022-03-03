@@ -120,6 +120,7 @@ s.waitForBoot({
 	~gwin.alwaysOnTop_(true);
 	~gwin.onClose_({
 		tearDown.value;
+		paramsStore.params.do {|param| param.remove };
 	});
 	CmdPeriod.doOnce({~gwin.close});
 });
@@ -143,7 +144,8 @@ s.waitForBoot({
 // [ ] Update Slider units based on Sync option
 // [ ] Convert grain density unit grains/sec to grains/beat
 // [ ] Persist Slider parameters
-// [ ] Try replacing defer statements and use AppClock for scheduling/
-
+// [ ] Try replacing defer statements and use AppClock for scheduling
+// [ ] Convert seconds to milliseconds when Sync is off
+// [ ] Add modes for Slider range e.g. Mode1: 0.01ms to 1000ms, Mode2: 0.01s to 1s
 
 )
