@@ -343,7 +343,6 @@ GranulatorSynth {
 		    tempo=120, tempofactor=1,
 		    granulationTriggerEnvelope=Env.asr;
 
-
 		    var sig, env, densCtrl, durCtrl, rateCtrl, panCtrl,
 		    origPtr, ptr, ptrRand, totalDelay, maxGrainDur;
 
@@ -358,8 +357,9 @@ GranulatorSynth {
 		    rateCtrl = rate * LFNoise1.ar(100).exprange(1/rateRand, rateRand);
 		    panCtrl = pan + LFNoise1.kr(100).bipolar(panRand);
 
+			// Add max criteria to prevent clicking
 		    ptrRand = LFNoise1.ar(100).bipolar(ptrRandSamples);
-		    totalDelay = max(max(1, ptrSampleDelay) - ptrRand, minPtrDelay);
+		    totalDelay = max(max(1, ptrSampleDelay) - ptrRand, max(minPtrDelay, ((baseDur * rate.midiratio) - baseDur * server.sampleRate)));
 
 		    origPtr = In.ar(ptrBus, 1);
 		    ptr = origPtr - totalDelay;
