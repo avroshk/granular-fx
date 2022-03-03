@@ -163,5 +163,6 @@ s.waitForBoot({
 // [ ] Add feedback functionality
 // [ ] Persist Slider parameters
 // [ ] Try replacing defer statements and use AppClock for scheduling
+// [ ] Ensure there is not delay between the Granulators
 
 )
