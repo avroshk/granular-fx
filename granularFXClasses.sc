@@ -806,9 +806,9 @@ GranulatorUI {
 			grainSizeUnitLabel.string_("beats");
 			delayUnitLabel.string_("beats");
 		} {
-			grainDensityUnitLabel.string_("grains/sec");
-			grainSizeUnitLabel.string_("sec");
-			delayUnitLabel.string_("sec");
+			grainDensityUnitLabel.string_(grainDensityParam.units);
+			grainSizeUnitLabel.string_(grainSizeParam.units);
+			delayUnitLabel.string_(delayParam.units);
 		};
 	}
 
