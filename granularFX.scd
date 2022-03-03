@@ -31,11 +31,15 @@ s.waitForBoot({
 	var defaultMasterGainValue = 0.8,
 	defaultMasterMixValue = 0,
 	defaultMasterTempoValue = 120,
+	defaultBeatsPerMeasure = 4,
+	defaultBeatLength = 4,
 	defaultGainValue = 0.75,
 	defaultGrainDensityValue = 4,
-	defaultGrainDensitySyncedValue = 4,
+	defaultGrainDensitySyncedValue = 2,
 	defaultGrainSizeValue = 20,
+	defaultGrainSizeSyncedValue = 2,
 	defaultDelayValue = 0,
+	defaultDelaySyncedValue = 4,
 	defaultPitchValue = 0,
 	defaultStereoWidthValue = 0;
 
@@ -51,6 +55,8 @@ s.waitForBoot({
 	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "", "Gain");
 	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "", "Dry/Wet");
 	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm", "Tempo");
+	paramsStore.addParam(\TimeSignatureBeatsPerMeasure, "Master", 1, 99, 1, defaultBeatsPerMeasure, "", "Beats per measure");
+	paramsStore.addParam(\TimeSignatureBeatLength, "Master", 1, 16, 1, defaultBeatLength, "", "Beat Length");
 
 	// Initialize parameters for each granulator
 	granulators.do({
@@ -61,7 +67,9 @@ s.waitForBoot({
 		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec", "Grain Density");
 		paramsStore.addParam(\GrainDensitySynced, id, 0, 20, 1, defaultGrainDensitySyncedValue, "grains/beat", "Grain Density");
 		paramsStore.addParam(\GrainSize, id, 0.01, 1000, 0.01, defaultGrainSizeValue, "milliseconds", "Grain Size");
+		paramsStore.addParam(\GrainSizeSynced, id, 0, 10, 1, defaultGrainSizeSyncedValue, "beatdivs", "Grain Size");
 		paramsStore.addParam(\GrainDelay, id, 0, 1000, 0.01, defaultDelayValue, "milliseconds", "Grain Delay");
+		paramsStore.addParam(\GrainDelaySynced, id, 0, 10, 1, defaultDelaySyncedValue, "beatdivs", "Grain Delay");
 		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones", "Pitch");
 		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "", "Pan");
 
@@ -146,12 +154,14 @@ s.waitForBoot({
 // [*] Initialize Synths settings from parameters
 // [*] Disable Master controls till Audio devices are ready
 // [*] Allow grains to be played back in reverse
-// [ ] Update Slider units based on Sync option
-// [ ] Convert grain density unit grains/sec to grains/beat
+// [*] Update Slider units based on Sync option
+// [*] Convert grain density unit grains/sec to grains/beat
+// [*] Convert seconds to milliseconds when Sync is off
+// [*] Add modes for Slider range e.g. Mode1: 0.01ms to 1000ms, Mode1: 1/512 note
+// [*] Add Tempo Slider for Syncing
+// [ ] Add freeze functionality
+// [ ] Add feedback functionality
 // [ ] Persist Slider parameters
 // [ ] Try replacing defer statements and use AppClock for scheduling
-// [ ] Convert seconds to milliseconds when Sync is off
-// [ ] Add modes for Slider range e.g. Mode1: 0.01ms to 1000ms, Mode2: 0.01s to 1s
-// [ ] Add freeze functionality
 
 )
