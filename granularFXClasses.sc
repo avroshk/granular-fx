@@ -159,10 +159,25 @@ GranulatorSetup {
 	}
 
 	createSynths {
+		// Params
+		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
+		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
+		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
+
+		masterGainParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\gain, masterGainParam.get); }); });
+		masterMixParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\mix, masterMixParam.get); }); });
+		// masterTempoParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{  }); });
+
 		micSynth = Synth(\mic, [\in, inBus, \out, micBus], micGrp);
 		ptrSynth = Synth(\ptr, [\buf, buffer, \out, ptrBus], ptrGrp);
 		recSynth = Synth(\rec, [\ptrIn, ptrBus, \micIn, micBus, \buf, buffer], recGrp);
-		masterSynth = Synth(\master, [\dryIn, micBus, \wetIn, masterBus, \out, outBus], masterGrp);
+		masterSynth = Synth(\master, [
+			\dryIn, micBus,
+			\wetIn, masterBus,
+			\out, outBus,
+			\gain, masterGainParam.get,
+			\mix, masterMixParam.get
+		], masterGrp);
 
 		synths = (
 			\mic: micSynth,
@@ -172,41 +187,7 @@ GranulatorSetup {
 		);
 
 		synthIDs = synths.collect(_.nodeID);
-
-		// Params
-		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
-		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
-		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
-
-		masterGainParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\gain, masterGainParam.get); }); });
-		masterMixParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{ masterSynth.set(\mix, masterMixParam.get); }); });
-		// masterTempoParam.addListener(\UpdateMasterSynth, { AppClock.sched(0,{  }); });
 	}
-
-	// setMasterGainAction {
-	// 	arg masterGainSlider;
-	// 	masterGainSlider.action = {
-	// 		arg l;
-	// 		masterSynth.set(\gain, l.value);
-	// 	};
-	// }
-	//
-	// setMasterMixAction {
-	// 	arg masterMixSlider;
-	// 	masterMixSlider.action = {
-	// 		arg l;
-	// 		masterSynth.set(\mix, l.value);
-	// 	};
-	// }
-
-	// setMasterTempoAction {
-	// 	arg cSpecTempo, sliderTempo, nbTempo;
-	// 	sliderTempo.action = {
-	// 		arg l;
-	// 		var value = cSpecTempo.map(l.value);
-	// 		nbTempo.value_(value);
-	// 	};
-	// }
 
 	freeBuses {
 		buses.do(_.free);
@@ -239,9 +220,10 @@ GranulatorSynth {
 	var server, synthId, synthfxname, buffer, ptrBus, outBus, grainGrp, params;
 	var synthfx;
 
-	var gainParam, grainDensityParam, grainSizeParam,
-	delayParam, pitchParam, stereoWidthParam,
-	onStateParam, syncModeParam;
+	var gainParam, grainDensityParam, grainSizeParam, grainSizeSyncedParam,
+	delayParam, delaySyncedParam, pitchParam, stereoWidthParam,
+	onStateParam, syncModeParam, reverseParam, masterTempoParam,
+	beatsPerMeasureParam;
 
 	*new {
 		arg server, synthId, synthfxname, buffer, ptrBus, outBus, grainGrp, params;
@@ -254,17 +236,49 @@ GranulatorSynth {
 		gainParam = params.getParam("%%".format(\Gain, synthId).asSymbol);
 		grainDensityParam = params.getParam("%%".format(\GrainDensity, synthId).asSymbol);
 		grainSizeParam = params.getParam("%%".format(\GrainSize, synthId).asSymbol);
+		grainSizeSyncedParam = params.getParam("%%".format(\GrainSizeSynced, synthId).asSymbol);
 		delayParam = params.getParam("%%".format(\GrainDelay, synthId).asSymbol);
+		delaySyncedParam = params.getParam("%%".format(\GrainDelaySynced, synthId).asSymbol);
 		pitchParam = params.getParam("%%".format(\GrainPitch, synthId).asSymbol);
 		stereoWidthParam = params.getParam("%%".format(\GrainStereoWidth, synthId).asSymbol);
 		onStateParam = params.getParam("%%".format(\OnState, synthId).asSymbol);
 		syncModeParam = params.getParam("%%".format(\SyncMode, synthId).asSymbol);
+		reverseParam = params.getParam("%%".format(\Reverse, synthId).asSymbol);
+		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
+		beatsPerMeasureParam = params.getParam("%%".format(\TimeSignatureBeatsPerMeasure, "Master").asSymbol);
 
 		gainParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\amp, gainParam.get); }); });
-		grainDensityParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\dens, grainDensityParam.get); }); });
-		grainSizeParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\baseDur, grainSizeParam.get); }); });
-		delayParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\ptrSampleDelay, server.sampleRate*delayParam.get); }); });
-		pitchParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\rate, pitchParam.get.midiratio); }); });
+		grainDensityParam.addListener(\UpdateSynth, {
+			AppClock.sched(0,{
+				synthfx.set(\dens, this.calcGrainDensity);
+			});
+		});
+		grainSizeParam.addListener(\UpdateSynth, {
+			AppClock.sched(0,{
+				synthfx.set(\baseDur, this.calcGrainSize);
+				// Add max criteria to prevent clicking while pitch shiting up
+				synthfx.set(\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate)));
+			});
+		});
+		grainSizeSyncedParam.addListener(\UpdateSynth, {
+			AppClock.sched(0,{
+				synthfx.set(\baseDur, this.calcGrainSize);
+				// Add max criteria to prevent clicking while pitch shiting up
+				synthfx.set(\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate)));
+			});
+		});
+		delayParam.addListener(\UpdateSynth, {
+			AppClock.sched(0,{
+				synthfx.set(\ptrSampleDelay, this.calcDelay);
+			});
+		});
+		pitchParam.addListener(\UpdateSynth, {
+			AppClock.sched(0, {
+				synthfx.set(\rate, this.getPitch);
+				// Add max criteria to prevent clicking while pitch shiting up
+				synthfx.set(\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate)));
+			});
+		});
 		stereoWidthParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\pan, stereoWidthParam.get); }); });
 		onStateParam.addListener(\UpdateSynth, { AppClock.sched(0, {
 				if (onStateParam.get == 0) {
@@ -276,26 +290,87 @@ GranulatorSynth {
 						\rel, 1,
 						\gate, 1,
 						\sync, syncModeParam.get,
-						\dens, grainDensityParam.get,
-						\baseDur, grainSizeParam.get,
+						\dens, this.calcGrainDensity,
+						\baseDur, this.calcGrainSize,
 						\durRand, 1,
-						\rate, pitchParam.get.midiratio,
+						\rate, this.getPitch,
 						\rateRand, 0.midiratio,
 						\pan, stereoWidthParam.get,
 						\panRand, 0.0,
 						\grainEnv, -1,
 						\ptrBus, ptrBus,
-						\ptrSampleDelay, delayParam.get*server.sampleRate,
+						\ptrSampleDelay, this.calcDelay,
 						\ptrRandomSamples, 0,
-						\minPtrDelay, 0
+						\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate))
 					], grainGrp);
 				} {
 					synthfx.free;
 				}
 			});
 		});
-		syncModeParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\sync, syncModeParam.get); }); });
+		syncModeParam.addListener(\UpdateSynth, {
+			AppClock.sched(0,{
+				// Let's stick with Trigger instead of Random Dust
+				// synthfx.set(\sync, syncModeParam.get);
+				masterTempoParam.set(masterTempoParam.get);
+			});
+		});
+		masterTempoParam.addListener("%%".format("UpdateSynth", synthId).asSymbol, {
+			AppClock.sched(0.0, {
+				if (onStateParam.get == 0) {
+					synthfx.set(\dens, this.calcGrainDensity);
+					synthfx.set(\baseDur, this.calcGrainSize);
+					synthfx.set(\ptrSampleDelay, this.calcDelay);
+				};
+			});
+		});
+		reverseParam.addListener(\UpdateSynth, {
+			AppClock.sched(0, {
+				pitchParam.set(pitchParam.get);
+			});
+		});
+	}
 
+	getNoteValue {
+		arg index;
+		var notes = [1/512,1/256,1/128,1/64,1/32,1/16,1/8,1/4,1/2,1,1.5];
+		^(notes[index]*this.getBeatsPerSecond)
+	}
+
+	calcGrainDensity { ^grainDensityParam.get*this.getBeatsPerSecond }
+
+	calcGrainSize {
+		if (syncModeParam.get == 1) {
+			^this.getNoteValue(grainSizeSyncedParam.get)
+		} {
+			^(grainSizeParam.get*this.getBeatsPerSecond)/1000
+		}
+	}
+
+	calcDelay {
+		if (syncModeParam.get == 1) {
+			^this.getNoteValue(delaySyncedParam.get)
+		} {
+			^server.sampleRate*delayParam.get*this.getBeatsPerSecond/1000
+		}
+	}
+
+	getBeatsPerSecond {
+		var bps;
+		if (syncModeParam.get == 0) {
+			bps = 1;
+		} {
+			bps = masterTempoParam.get/60;
+		};
+		^bps
+	}
+
+	getPitch {
+		if (reverseParam.get == 0) {
+			^(1.0)*(pitchParam.get.midiratio)
+		} {
+			^(-1.0)*(pitchParam.get.midiratio)
+		};
 	}
 
 	initUGens {
@@ -310,7 +385,6 @@ GranulatorSynth {
 		    ptrRandSamples=5000, minPtrDelay=1000,
 		    tempo=120, tempofactor=1,
 		    granulationTriggerEnvelope=Env.asr;
-
 
 		    var sig, env, densCtrl, durCtrl, rateCtrl, panCtrl,
 		    origPtr, ptr, ptrRand, totalDelay, maxGrainDur;
@@ -327,14 +401,14 @@ GranulatorSynth {
 		    panCtrl = pan + LFNoise1.kr(100).bipolar(panRand);
 
 		    ptrRand = LFNoise1.ar(100).bipolar(ptrRandSamples);
-		    totalDelay = max(ptrSampleDelay - ptrRand, minPtrDelay);
+		    totalDelay = max(max(1, ptrSampleDelay) - ptrRand, minPtrDelay);
 
 		    origPtr = In.ar(ptrBus, 1);
 		    ptr = origPtr - totalDelay;
 		    ptr = ptr / BufFrames.kr(buf);
 
-		    maxGrainDur = (totalDelay / rateCtrl) / SampleRate.ir;
-		    durCtrl = min(durCtrl, maxGrainDur);
+		    // maxGrainDur = (totalDelay / rateCtrl) / SampleRate.ir;
+		    // durCtrl = min(durCtrl, maxGrainDur);
 
 		    sig = GrainBuf.ar(
 		        numChannels:2,
@@ -356,25 +430,33 @@ GranulatorSynth {
 
 GranulatorMasterUI {
 	// master layout
-	classvar server, pluginTitle = "granularFX";
-	classvar pluginTitleLabel, masterLabel,
+	var server, pluginTitle, version, params;
+	var pluginTitleLabel, masterLabel,
 	inputDeviceLabel, outputDeviceLabel,
-	<masterGainSlider, masterGainText,
-	<masterMixSlider, masterMixText,
+	masterGainSlider, masterGainText,
+	masterMixSlider, masterMixText,
 	masterTempoLayout, masterTempoSlider, nbTempo,
 	inputDevicePopUp, outputDevicePopUp,
-	loadingText;
+	loadingText,
+	timeSignatureLayout, nbBeatLength, nbBeatsPerMeasure;
 
-	classvar masterGainParam, masterMixParam,
-	masterTempoParam;
+	var masterGainParam, masterMixParam,
+	masterTempoParam, beatsPerMeasureParam, beatLengthParam;
 
-	*masterInit {
-		arg server, setUp, tearDown, params;
+	*new {
+		arg server, pluginTitle, version, params;
+		^super.newCopyArgs(server, pluginTitle, version, params)
+	}
+
+	init {
+		arg setUp, tearDown;
 
 		// Get params
 		masterGainParam = params.getParam("%%".format(\Gain, "Master").asSymbol);
 		masterMixParam = params.getParam("%%".format(\Mix, "Master").asSymbol);
 		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
+		beatsPerMeasureParam = params.getParam("%%".format(\TimeSignatureBeatsPerMeasure, "Master").asSymbol);
+		beatLengthParam = params.getParam("%%".format(\TimeSignatureBeatLength, "Master").asSymbol);
 
 		pluginTitleLabel = StaticText().string_(pluginTitle).font_(Font("Helvetica",18, true));
 		inputDeviceLabel = StaticText().string_("Input Device").font_(Font("Helvetica", 14, bold:true));
@@ -386,21 +468,21 @@ GranulatorMasterUI {
 				masterGainParam.setRaw(l.value);
 			}).value_(masterGainParam.getRaw)
 			.orientation_(\vertical);
-		masterGainText = StaticText().string_("Gain").align_(\center);
+		masterGainText = StaticText().string_(masterGainParam.title).align_(\center);
 		masterMixSlider = Slider().value_(masterMixParam.get)
 			.action_({
 				arg l;
 				masterMixParam.setRaw(l.value);
 			}).value_(masterMixParam.getRaw)
 			.orientation_(\vertical);
-		masterMixText = StaticText().string_("Dry/Wet").align_(\center);
+		masterMixText = StaticText().string_(masterMixParam.title).align_(\center);
 		loadingText = StaticText().align_(\center);
 		inputDevicePopUp = PopUpMenu().items_(ServerOptions.inDevices).font_(Font("Helvetica",12));
 		outputDevicePopUp = PopUpMenu().items_(ServerOptions.outDevices).font_(Font("Helvetica",12));
 		masterTempoLayout = VLayout(
 			HLayout(
-				StaticText().string_("Tempo"),
-				StaticText().string_("bpm").align_(\right),
+				StaticText().string_(masterTempoParam.title),
+				StaticText().string_(masterTempoParam.units).align_(\right),
 			),
 			HLayout(
 				masterTempoSlider = Slider().orientation_(\horizontal)
@@ -408,7 +490,7 @@ GranulatorMasterUI {
 						arg l;
 						masterTempoParam.setRaw(l.value);
 					}).value_(masterTempoParam.getRaw),
-					nbTempo = NumberBox().maxWidth_(40).action_({
+				nbTempo = NumberBox().maxWidth_(40).action_({
 						arg v;
 						masterTempoParam.set(v.value);
 					}).value_(masterTempoParam.get)
@@ -416,24 +498,36 @@ GranulatorMasterUI {
 		);
 		masterTempoParam.addListenerOnRaw(\WatchSlider, { AppClock.sched(0,{ nbTempo.value = masterTempoParam.get; }); });
 		masterTempoParam.addListener(\WatchNb, { AppClock.sched(0,{ masterTempoSlider.value = masterTempoParam.getRaw; }); });
+		timeSignatureLayout = VLayout(
+			HLayout(
+				StaticText().string_("Time Signature").align_(\left),
+				nil,
+				nbBeatLength = NumberBox().maxWidth_(30).align_(\right).value_(beatsPerMeasureParam.get),
+				StaticText().string_("/").align_(\right),
+				nbBeatsPerMeasure = NumberBox().maxWidth_(30).align_(\right).value_(beatLengthParam.get)
+			)
+		);
+
+		nbBeatLength.enabled_(0);
+		nbBeatsPerMeasure.enabled_(0);
 
 		GranulatorPreferences.initClass;
 
 		inputDevicePopUp.action = {
 			arg c;
 			this.setInputDevice(server, c.item);
-			this.runBootSequence(server, setUp, tearDown);
+			{this.runBootSequence(server, setUp, tearDown)}.defer(0.1);
 		};
 
 		outputDevicePopUp.action = {
 			arg c;
 			this.setOutputDevice(server, c.item);
-			this.runBootSequence(server, setUp, tearDown);
+			{this.runBootSequence(server, setUp, tearDown)}.defer(0.1);
 		};
 	}
 
-	*refreshAudioDevices {
-		arg server, setUp, tearDown;
+	refreshAudioDevices {
+		arg setUp, tearDown;
 		this.setPreferredDevices(server);
 		this.setDefaultAudioDevices(server);
 		// Defer, so that changes in the audio devices
@@ -441,9 +535,10 @@ GranulatorMasterUI {
 		{this.runBootSequence(server, setUp, tearDown)}.defer(0.1);
 	}
 
-	*runBootSequence {
+	runBootSequence {
 		arg server, setUp, tearDown;
 
+		this.disableElements;
 		loadingText.string_("Setting up audio device...");
 		tearDown.value;
 		server.reboot();
@@ -451,6 +546,7 @@ GranulatorMasterUI {
 			onComplete: {
 				setUp.value;
 				loadingText.string_("Ready!");
+				this.enableElements;
 				1.wait;
 				loadingText.string_("");
 			},
@@ -460,19 +556,19 @@ GranulatorMasterUI {
 		);
 	}
 
-	*setInputDevice {
+	setInputDevice {
 		arg server, device;
 		server.options.inDevice_(device);
 		GranulatorPreferences.savePref("inDevice", [device]);
 	}
 
-	*setOutputDevice {
+	setOutputDevice {
 		arg server, device;
 		server.options.outDevice_(device);
 		GranulatorPreferences.savePref("outDevice", [device]);
 	}
 
-	*setPreferredDevices {
+	setPreferredDevices {
 		arg server;
 		var preferredInDevice = GranulatorPreferences.loadPref("inDevice")[0];
 		var preferredOutDevice = GranulatorPreferences.loadPref("outDevice")[0];
@@ -499,7 +595,7 @@ GranulatorMasterUI {
 		};
 	}
 
-	*setDefaultAudioDevices {
+	setDefaultAudioDevices {
 		arg server;
 
 		postf("InDevice: %\n", server.options.inDevice);
@@ -527,7 +623,7 @@ GranulatorMasterUI {
 		});
 	}
 
-	*getMasterLayout {
+	getMasterLayout {
 		^VLayout(
 			pluginTitleLabel,
 			VLayout(
@@ -540,6 +636,7 @@ GranulatorMasterUI {
 			VLayout(
 				masterLabel,
 				masterTempoLayout,
+				timeSignatureLayout,
 				HLayout(
 					VLayout(
 						masterGainSlider,
@@ -553,28 +650,32 @@ GranulatorMasterUI {
 			).margins_([0,20,0,0])
 		)
 	}
+
+	disableElements {
+		masterGainSlider.enabled_(0);
+		masterMixSlider.enabled_(0);
+		masterTempoSlider.enabled_(0);
+	}
+
+	enableElements {
+		masterGainSlider.enabled_(1);
+		masterMixSlider.enabled_(1);
+		masterTempoSlider.enabled_(1);
+	}
 }
 
 GranulatorUI {
 	var id, <title, params;
 	var titleLabel,
-	<onButton, onStateParam,
-	<syncButton, syncModeParam,
+	onButton, onStateParam,
+	syncButton, syncModeParam,
+	reverseButton, reverseParam,
 	gainLayout, sliderGain, nbGain, gainParam,
-	grainDensityLayout, sliderGrainDensity, nbGrainDensity, grainDensityParam,
-	grainSizeLayout, sliderGrainSize, nbGrainSize, grainSizeParam, grainSizeParam,
-	delayLayout, sliderDelay, nbDelay, delayParam,
+	grainDensityLayout, grainDensityUnitLabel, sliderGrainDensity, sliderGrainDensitySynced, nbGrainDensity, grainDensityParam, grainDensitySyncedParam,
+	grainSizeLayout, grainSizeUnitLabel, sliderGrainSize, sliderGrainSizeSynced, nbGrainSize, grainSizeParam, grainSizeParam, grainSizeSyncedParam,
+	delayLayout, delayUnitLabel, sliderDelay, sliderDelaySynced, nbDelay, delayParam, delaySyncedParam,
 	pitchLayout, sliderPitch, nbPitch, pitchParam,
 	stereoWidthLayout, sliderStereoWidth, nbStereoWidth, stereoWidthParam;
-
-	// Synth Defaults
-	var defaultGainValue = 0.75,
-	defaultGrainDensityValue = 8,
-	defaultGrainSizeValue = 0.05,
-	defaultDelayValue = 0.1,
-	defaultPitchValue = 0,
-	defaultStereoWidthValue = 0,
-	defaultSyncMode = 0;
 
    	*new {
 		arg id, title, params;
@@ -584,14 +685,17 @@ GranulatorUI {
 	init {
 		gainParam = params.getParam("%%".format(\Gain, id).asSymbol);
 		grainDensityParam = params.getParam("%%".format(\GrainDensity, id).asSymbol);
+		grainDensitySyncedParam = params.getParam("%%".format(\GrainDensitySynced, id).asSymbol);
 		grainSizeParam = params.getParam("%%".format(\GrainSize, id).asSymbol);
+		grainSizeSyncedParam = params.getParam("%%".format(\GrainSizeSynced, id).asSymbol);
 		delayParam = params.getParam("%%".format(\GrainDelay, id).asSymbol);
+		delaySyncedParam = params.getParam("%%".format(\GrainDelaySynced, id).asSymbol);
 		pitchParam = params.getParam("%%".format(\GrainPitch, id).asSymbol);
 		stereoWidthParam = params.getParam("%%".format(\GrainStereoWidth, id).asSymbol);
 
 		onStateParam = params.getParam("%%".format(\OnState, id).asSymbol);
 		syncModeParam = params.getParam("%%".format(\SyncMode, id).asSymbol);
-
+		reverseParam = params.getParam("%%".format(\Reverse, id).asSymbol);
 
 		titleLabel = StaticText().string_(title).font_(Font("Helvetica", 16, bold:true));
 
@@ -622,13 +726,25 @@ GranulatorUI {
 			.mouseDownAction_({
 				arg state;
 				syncModeParam.set(1-state.value);
+				this.updateSyncSettings;
 			})
 			.value_(syncModeParam.get);
 
+		reverseButton = Button()
+			.states_([
+				["Reverse off", Color.gray(0.2), Color.gray(0.8)],
+				["Reverse on", Color.gray(0.2), Color.gray(0.9)]
+			])
+			.mouseDownAction_({
+				arg state;
+				reverseParam.set(1-state.value);
+			})
+			.value_(reverseParam.get);
+
 		gainLayout = VLayout(
 			HLayout(
-				StaticText().string_("Gain"),
-				StaticText().string_("").align_(\right),
+				StaticText().string_(gainParam.title),
+				StaticText().string_(gainParam.units).align_(\right),
 			),
 			HLayout(
 				sliderGain = Slider().orientation_(\horizontal).action_({
@@ -647,13 +763,14 @@ GranulatorUI {
 		grainDensityLayout = HLayout(
 			VLayout(
 				HLayout(
-					StaticText().string_("Grain Density"),
-					StaticText().string_("grains/sec").align_(\right),
+					StaticText().string_(grainDensityParam.title),
+					grainDensityUnitLabel = StaticText().string_(grainDensityParam.units).align_(\right),
 				),
 				HLayout(
 					sliderGrainDensity = Slider().orientation_(\horizontal).action_({
 						arg l;
 						grainDensityParam.setRaw(l.value);
+						grainDensitySyncedParam.setRaw(l.value);
 					}).value_(grainDensityParam.getRaw),
 					nbGrainDensity = NumberBox().maxWidth_(40).action_({
 						arg v;
@@ -667,33 +784,47 @@ GranulatorUI {
 
 		grainSizeLayout = VLayout(
 			HLayout(
-				StaticText().string_("Grain Size"),
-				StaticText().string_("sec").align_(\right),
+				StaticText().string_(grainSizeParam.title),
+				grainSizeUnitLabel = StaticText().string_(grainSizeParam.units).align_(\right),
 			),
 			HLayout(
 				sliderGrainSize = Slider().orientation_(\horizontal).action_({
 					arg l;
 					grainSizeParam.setRaw(l.value);
 				}).value_(grainSizeParam.getRaw),
+				sliderGrainSizeSynced = Slider().orientation_(\horizontal).action_({
+					arg l;
+					grainSizeSyncedParam.setRaw(l.value);
+				}).value_(grainSizeSyncedParam.getRaw),
 				nbGrainSize = NumberBox().maxWidth_(40).action_({
 					arg v;
 					grainSizeParam.set(v.value);
-				}).value_(grainSizeParam.get)
+				}).value_(grainSizeParam.get),
 			)
 		);
 		grainSizeParam.addListenerOnRaw(\WatchSlider, { AppClock.sched(0,{ nbGrainSize.value = grainSizeParam.get; }); });
 		grainSizeParam.addListener(\WatchNb, { AppClock.sched(0,{ sliderGrainSize.value = grainSizeParam.getRaw; }); });
+		grainSizeSyncedParam.addListenerOnRaw(\WatchSlider, {
+			AppClock.sched(0,{
+				grainSizeUnitLabel.string_(this.getNoteName(grainSizeSyncedParam.get));
+			});
+		});
+
 
 		delayLayout = VLayout(
 			HLayout(
-				StaticText().string_("Start position delay"),
-				StaticText().string_("sec").align_(\right),
+				StaticText().string_(delayParam.title),
+				delayUnitLabel = StaticText().string_(delayParam.units).align_(\right),
 			),
 			HLayout(
 				sliderDelay = Slider().orientation_(\horizontal).action_({
 					arg l;
 					delayParam.setRaw(l.value);
 				}).value_(delayParam.getRaw),
+				sliderDelaySynced = Slider().orientation_(\horizontal).action_({
+					arg l;
+					delaySyncedParam.setRaw(l.value);
+				}).value_(delaySyncedParam.getRaw),
 				nbDelay = NumberBox().maxWidth_(40).action_({
 					arg v;
 					delayParam.set(v.value);
@@ -702,11 +833,16 @@ GranulatorUI {
 		);
 		delayParam.addListenerOnRaw(\WatchSlider, { AppClock.sched(0,{ nbDelay.value = delayParam.get; }); });
 		delayParam.addListener(\WatchNb, { AppClock.sched(0,{ sliderDelay.value = delayParam.getRaw; }); });
+		// delaySyncedParam.addListenerOnRaw(\WatchSlider, {
+		// 	AppClock.sched(0,{
+		// 		delayUnitLabel.string_(this.getNoteName(delaySyncedParam.get));
+		// 	});
+		// });
 
 		pitchLayout = VLayout(
 			HLayout(
-				StaticText().string_("Pitch"),
-				StaticText().string_("semitones").align_(\right),
+				StaticText().string_(pitchParam.title),
+				StaticText().string_(pitchParam.units).align_(\right),
 			),
 			HLayout(
 				sliderPitch = Slider().orientation_(\horizontal).action_({
@@ -724,8 +860,8 @@ GranulatorUI {
 
 		stereoWidthLayout = VLayout(
 			HLayout(
-				StaticText().string_("Width (stereo)"),
-				StaticText().string_("").align_(\right),
+				StaticText().string_(stereoWidthParam.title),
+				StaticText().string_(stereoWidthParam.units).align_(\right),
 			),
 			HLayout(
 				sliderStereoWidth = Slider().orientation_(\horizontal).action_({
@@ -742,6 +878,47 @@ GranulatorUI {
 		stereoWidthParam.addListener(\WatchNb, { AppClock.sched(0,{ sliderStereoWidth.value = stereoWidthParam.getRaw; }); });
 
 		this.turnOff;
+		this.updateSyncSettings;
+	}
+
+	getNoteName {
+		arg index;
+		var notes = ["1/512","1/256","1/128","1/64","1/32","1/16","1/8","1/4","1/2","1", "1.5"];
+		^"% note".format(notes[index])
+	}
+
+	updateSyncSettings {
+		if (syncModeParam.get == 1) {
+			grainDensityUnitLabel.string_(grainDensitySyncedParam.units);
+			grainSizeUnitLabel.string_(this.getNoteName(grainSizeSyncedParam.get));
+			// delayUnitLabel.string_(this.getNoteName(delaySyncedParam.get));
+
+			sliderGrainSize.visible_(0);
+			sliderGrainSizeSynced.visible_(1);
+
+			// sliderDelay.visible_(0);
+			// sliderDelaySynced.visible_(1);
+
+			nbGrainSize.visible_(0);
+			// nbDelay.visible_(0);
+
+			sliderDelaySynced.visible_(0);
+		} {
+			grainDensityUnitLabel.string_(grainDensityParam.units);
+			grainSizeUnitLabel.string_(grainSizeParam.units);
+			// delayUnitLabel.string_(delayParam.units);
+
+			sliderGrainSize.visible_(1);
+			sliderGrainSizeSynced.visible_(0);
+
+			// sliderDelay.visible_(1);
+			// sliderDelaySynced.visible_(0);
+
+			nbGrainSize.visible_(1);
+			// nbDelay.visible_(1);
+
+			sliderDelaySynced.visible_(0);
+		};
 	}
 
 	getLayout {
@@ -749,6 +926,7 @@ GranulatorUI {
 			titleLabel,
 			onButton,
 			syncButton,
+			reverseButton,
 			gainLayout,
 			grainDensityLayout,
 			grainSizeLayout,
@@ -792,13 +970,20 @@ GranulatorUI {
 			["Sync off", Color.gray(0.2, 0.8), Color.gray(0.8, 0.5)],
 			["Sync on", Color.gray(0.2, 0.8), Color.grey(0.9, 0.5)]
 		]).valueAction_(syncModeParam.get);
+		reverseButton.enabled_(0);
+		reverseButton.states_([
+			["Reverse off", Color.gray(0.2, 0.8), Color.gray(0.8, 0.5)],
+			["Reverse on", Color.gray(0.2, 0.8), Color.grey(0.9, 0.5)]
+		]).valueAction_(reverseParam.get);
 		sliderGain.enabled_(0);
 		nbGain.enabled_(0);
 		sliderGrainDensity.enabled_(0);
+		sliderGrainSizeSynced.enabled_(0);
 		nbGrainDensity.enabled_(0);
 		sliderGrainSize.enabled_(0);
 		nbGrainSize.enabled_(0);
 		sliderDelay.enabled_(0);
+		sliderDelaySynced.enabled_(0);
 		nbDelay.enabled_(0);
 		sliderPitch.enabled_(0);
 		nbPitch.enabled_(0);
@@ -812,34 +997,31 @@ GranulatorUI {
 			["Sync off", Color.gray(0.2), Color.gray(0.8)],
 			["Sync on", Color.gray(0.2), Color.grey(0.9)]
 		]).valueAction_(syncModeParam.get);
+		reverseButton.enabled_(1);
+		reverseButton.states_([
+			["Reverse off", Color.gray(0.2), Color.gray(0.8)],
+			["Reverse on", Color.gray(0.2), Color.grey(0.9)]
+		]).valueAction_(reverseParam.get);
 		sliderGain.enabled_(1);
 		nbGain.enabled_(1);
 		sliderGrainDensity.enabled_(1);
 		nbGrainDensity.enabled_(1);
 		sliderGrainSize.enabled_(1);
+		sliderGrainSizeSynced.enabled_(1);
 		nbGrainSize.enabled_(1);
 		sliderDelay.enabled_(1);
+		sliderDelaySynced.enabled_(1);
 		nbDelay.enabled_(1);
 		sliderPitch.enabled_(1);
 		nbPitch.enabled_(1);
 		sliderStereoWidth.enabled_(1);
 		nbStereoWidth.enabled_(1);
 	}
-
-	applySynthDefaults {
-		nbGain.valueAction_(defaultGainValue);
-		nbGrainSize.valueAction_(defaultGrainSizeValue);
-		nbGrainDensity.valueAction_(defaultGrainDensityValue);
-		nbDelay.valueAction_(defaultDelayValue);
-		nbPitch.valueAction_(defaultPitchValue);
-		nbStereoWidth.valueAction_(defaultStereoWidthValue);
-		syncButton.valueAction_(defaultSyncMode);
-	}
 }
 
 GranulatorParam {
 	var name, id, minValue, maxValue, step,
-	default, units, listeners;
+	default, units, <title, listeners;
 
 	var value, cSpec;
 	var <setDefName, <setRawDefName,
@@ -850,8 +1032,8 @@ GranulatorParam {
 	classvar net;
 
 	*new {
-		arg name, id, minValue, maxValue, step, default, units;
-		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units, []);
+		arg name, id, minValue, maxValue, step, default, units, title;
+		^super.newCopyArgs(name, id, minValue, maxValue, step, default, units, title, []);
 	}
 
 	init {
@@ -875,6 +1057,8 @@ GranulatorParam {
 		this.prepareOSCComm;
 		this.broadcast;
 	}
+
+	units { ^cSpec.units }
 
 	broadcast {
 		net.sendMsg(broadcastOscPathName, this.get);
@@ -944,6 +1128,12 @@ GranulatorParam {
 		OSCdef(setDefName).free;
 		OSCdef(setRawDefName).free;
 	}
+
+	remove {
+		this.clearListeners;
+		this.resetActions;
+		net.disconnect;
+	}
 }
 
 GranulatorParameterStore {
@@ -954,9 +1144,9 @@ GranulatorParameterStore {
 	}
 
 	addParam {
-		arg name, id, minValue, maxValue, step, default, units;
+		arg name, id, minValue, maxValue, step, default, units, title;
 		var uniqueId = "%%".format(name, id).asSymbol;
-		var param = GranulatorParam.new(name, id, minValue, maxValue, step, default, units);
+		var param = GranulatorParam.new(name, id, minValue, maxValue, step, default, units, title);
 		param.init.value;
 		params.put(uniqueId, param);
 		^param

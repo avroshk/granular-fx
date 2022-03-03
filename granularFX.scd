@@ -23,7 +23,7 @@ s.options.outDevice = outDevice;
 s.waitForBoot({
 	var inBus=0, outBus=0;
 	var bufferLength=5;
-	var granulatorUIs, gSynths;
+	var masterUI, granulatorUIs, gSynths;
 	var setUp, tearDown, gSetup;
 	var paramsStore;
 
@@ -31,54 +31,64 @@ s.waitForBoot({
 	var defaultMasterGainValue = 0.8,
 	defaultMasterMixValue = 0,
 	defaultMasterTempoValue = 120,
+	defaultBeatsPerMeasure = 4,
+	defaultBeatLength = 4,
 	defaultGainValue = 0.75,
-	defaultGrainDensityValue = 8,
-	defaultGrainSizeValue = 0.05,
-	defaultDelayValue = 0.1,
+	defaultGrainDensityValue = 4,
+	defaultGrainDensitySyncedValue = 2,
+	defaultGrainSizeValue = 20,
+	defaultGrainSizeSyncedValue = 2,
+	defaultDelayValue = 0,
+	defaultDelaySyncedValue = 4,
 	defaultPitchValue = 0,
 	defaultStereoWidthValue = 0;
 
 	// Other UI Defaults
 	var defaultOnState = 0,
-	defaultSyncMode = 0;
-
+	defaultSyncMode = 1,
+	defaultReverse = 0;
 
 	var granulators = ["Granulator1", "Granulator2", "Granulator3"];
 
 	// Initialize Parameter store
 	paramsStore = GranulatorParameterStore.new;
-	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "");
-	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "");
-	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm");
+	paramsStore.addParam(\Gain, "Master", 0, 1, 0.01, defaultMasterGainValue, "", "Gain");
+	paramsStore.addParam(\Mix, "Master", 0, 1, 0.01, defaultMasterMixValue, "", "Dry/Wet");
+	paramsStore.addParam(\Tempo, "Master", 20, 999, 0.1, defaultMasterTempoValue, "bpm", "Tempo");
+	paramsStore.addParam(\TimeSignatureBeatsPerMeasure, "Master", 1, 99, 1, defaultBeatsPerMeasure, "", "Beats per measure");
+	paramsStore.addParam(\TimeSignatureBeatLength, "Master", 1, 16, 1, defaultBeatLength, "", "Beat Length");
 
 	// Initialize parameters for each granulator
 	granulators.do({
 		arg title, i;
 		var id = "G%".format(i).asSymbol;
 
-		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "");
-		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec");
-		paramsStore.addParam(\GrainSize, id, 0.01, 1, 0.01, defaultGrainSizeValue, "sec");
-		paramsStore.addParam(\GrainDelay, id, 0.01, 1, 0.01, defaultDelayValue, "sec");
-		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones");
-		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "");
+		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "", "Gain");
+		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec", "Grain Density");
+		paramsStore.addParam(\GrainDensitySynced, id, 0, 20, 1, defaultGrainDensitySyncedValue, "grains/beat", "Grain Density");
+		paramsStore.addParam(\GrainSize, id, 0.01, 1000, 0.01, defaultGrainSizeValue, "milliseconds", "Grain Size");
+		paramsStore.addParam(\GrainSizeSynced, id, 0, 10, 1, defaultGrainSizeSyncedValue, "beatdivs", "Grain Size");
+		paramsStore.addParam(\GrainDelay, id, 0, 1000, 0.01, defaultDelayValue, "milliseconds", "Grain Delay");
+		paramsStore.addParam(\GrainDelaySynced, id, 0, 10, 1, defaultDelaySyncedValue, "beatdivs", "Grain Delay");
+		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones", "Pitch");
+		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "", "Pan");
 
 		paramsStore.addParam(\OnState, id, 0, 1, 1, defaultOnState, "");
 		paramsStore.addParam(\SyncMode, id, 0, 1, 1, defaultSyncMode, "");
+		paramsStore.addParam(\Reverse, id, 0, 1, 1, defaultReverse, "");
 	});
 
+	// Initialize Granulator UIs
 	granulatorUIs = granulators.collect {|title, i| GranulatorUI("G%".format(i).asSymbol, title, paramsStore) };
 	granulatorUIs.do(_.init);
 
-	setUp = {
+	// Initialize Master UI
+	masterUI = GranulatorMasterUI.new(s, "granularFX", "0.0.1", paramsStore);
 
+	setUp = {
 		// Create Buses & Groups to manage the signal chain
 		gSetup = GranulatorSetup.new(s, bufferLength, paramsStore, inBus, outBus);
 		gSetup.init;
-
-		// gSetup.setMasterGainAction(GranulatorMasterUI.masterGainSlider);
-		// gSetup.setMasterMixAction(GranulatorMasterUI.masterMixSlider);
-		// gSetup.setMasterTempoAction(GranulatorMasterUI.cSpecTempo, GranulatorMasterUI.masterTempoSlider, GranulatorMasterUI.nbTempo);
 
 		gSynths = granulators.collect {
 			|title, i|
@@ -93,8 +103,6 @@ s.waitForBoot({
 				paramsStore)
 		};
 		gSynths.do(_.init);
-
-		granulatorUIs.do(_.applySynthDefaults);
 		granulatorUIs.do(_.enableButton);
 	};
 
@@ -109,12 +117,12 @@ s.waitForBoot({
 	~gwin = Window.new("granularFX", Rect(left:20, top:20, width: 900, height: 500)).alpha_(0.98);
 	~gwin.background = Color.gray(0.3,1);
 
-	GranulatorMasterUI.masterInit(s, setUp, tearDown, paramsStore);
+	masterUI.init(setUp, tearDown);
 	setUp.value;
-	GranulatorMasterUI.refreshAudioDevices(s, setUp, tearDown);
+	masterUI.refreshAudioDevices(setUp, tearDown);
 
 	~gwin.layout = HLayout(
-		GranulatorMasterUI.getMasterLayout,
+		masterUI.getMasterLayout,
 		HLayout(
 			*granulatorUIs.collect {|gui| gui.getLayout.margins_([20,0,0,0])}
 		)
@@ -124,6 +132,7 @@ s.waitForBoot({
 	~gwin.alwaysOnTop_(true);
 	~gwin.onClose_({
 		tearDown.value;
+		paramsStore.params.do {|param| param.remove };
 	});
 	CmdPeriod.doOnce({~gwin.close});
 });
@@ -142,10 +151,18 @@ s.waitForBoot({
 // [*] Use OSC for handling parameters
 // [*] Use OSC for handling master parameters
 // [*] Use OSC for handling binary parameters
-// [ ] Initialize Synths settings from parameters
-// [ ] Disable Master controls till Audio devices are ready
-// [ ] Update Slider units based on Sync option
+// [*] Initialize Synths settings from parameters
+// [*] Disable Master controls till Audio devices are ready
+// [*] Allow grains to be played back in reverse
+// [*] Update Slider units based on Sync option
+// [*] Convert grain density unit grains/sec to grains/beat
+// [*] Convert seconds to milliseconds when Sync is off
+// [*] Add modes for Slider range e.g. Mode1: 0.01ms to 1000ms, Mode1: 1/512 note
+// [*] Add Tempo Slider for Syncing
+// [ ] Add freeze functionality
+// [ ] Add feedback functionality
 // [ ] Persist Slider parameters
-// [ ] Try replacing defer statements and using AppClock scheduling
+// [ ] Try replacing defer statements and use AppClock for scheduling
+// [ ] Ensure there is not delay between the Granulators
 
 )
