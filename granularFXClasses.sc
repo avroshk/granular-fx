@@ -222,7 +222,7 @@ GranulatorSynth {
 
 	var gainParam, grainDensityParam, grainSizeParam,
 	delayParam, pitchParam, stereoWidthParam,
-	onStateParam, syncModeParam, masterTempoParam;
+	onStateParam, syncModeParam, reverseParam, masterTempoParam;
 
 	*new {
 		arg server, synthId, synthfxname, buffer, ptrBus, outBus, grainGrp, params;
@@ -240,6 +240,7 @@ GranulatorSynth {
 		stereoWidthParam = params.getParam("%%".format(\GrainStereoWidth, synthId).asSymbol);
 		onStateParam = params.getParam("%%".format(\OnState, synthId).asSymbol);
 		syncModeParam = params.getParam("%%".format(\SyncMode, synthId).asSymbol);
+		reverseParam = params.getParam("%%".format(\Reverse, synthId).asSymbol);
 		masterTempoParam = params.getParam("%%".format(\Tempo, "Master").asSymbol);
 
 		gainParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\amp, gainParam.get); }); });
@@ -258,11 +259,7 @@ GranulatorSynth {
 				synthfx.set(\ptrSampleDelay, this.calcDelay);
 			});
 		});
-		pitchParam.addListener(\UpdateSynth, {
-			AppClock.sched(0, {
-				synthfx.set(\rate, pitchParam.get.midiratio);
-			});
-		});
+		pitchParam.addListener(\UpdateSynth, { AppClock.sched(0, { synthfx.set(\rate, this.getPitch); }); });
 		stereoWidthParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\pan, stereoWidthParam.get); }); });
 		onStateParam.addListener(\UpdateSynth, { AppClock.sched(0, {
 				if (onStateParam.get == 0) {
@@ -277,7 +274,7 @@ GranulatorSynth {
 						\dens, this.calcGrainDensity,
 						\baseDur, this.calcGrainSize,
 						\durRand, 1,
-						\rate, pitchParam.get.midiratio,
+						\rate, this.getPitch,
 						\rateRand, 0.midiratio,
 						\pan, stereoWidthParam.get,
 						\panRand, 0.0,
@@ -302,11 +299,16 @@ GranulatorSynth {
 				};
 			});
 		});
+		reverseParam.addListener(\UpdateSynth, {
+			AppClock.sched(0, {
+				pitchParam.set(pitchParam.get);
+			});
+		});
 	}
 
 	calcGrainDensity { ^grainDensityParam.get*this.getBeatsPerSecond }
 
-	calcGrainSize { ^grainSizeParam.get*this.getBeatsPerSecond }
+	calcGrainSize { ^(grainSizeParam.get*this.getBeatsPerSecond)/1000 }
 
 	calcDelay { ^server.sampleRate*delayParam.get*this.getBeatsPerSecond }
 
@@ -318,6 +320,14 @@ GranulatorSynth {
 			bps = masterTempoParam.get/60;
 		};
 		^bps
+	}
+
+	getPitch {
+		if (reverseParam.get == 0) {
+			^(1.0)*(pitchParam.get.midiratio)
+		} {
+			^(-1.0)*(pitchParam.get.midiratio)
+		};
 	}
 
 	initUGens {
@@ -601,6 +611,7 @@ GranulatorUI {
 	var titleLabel,
 	onButton, onStateParam,
 	syncButton, syncModeParam,
+	reverseButton, reverseParam,
 	gainLayout, sliderGain, nbGain, gainParam,
 	grainDensityLayout, grainDensityUnitLabel, sliderGrainDensity, nbGrainDensity, grainDensityParam,
 	grainSizeLayout, grainSizeUnitLabel, sliderGrainSize, nbGrainSize, grainSizeParam, grainSizeParam,
@@ -623,6 +634,7 @@ GranulatorUI {
 
 		onStateParam = params.getParam("%%".format(\OnState, id).asSymbol);
 		syncModeParam = params.getParam("%%".format(\SyncMode, id).asSymbol);
+		reverseParam = params.getParam("%%".format(\Reverse, id).asSymbol);
 
 		titleLabel = StaticText().string_(title).font_(Font("Helvetica", 16, bold:true));
 
@@ -657,10 +669,21 @@ GranulatorUI {
 			})
 			.value_(syncModeParam.get);
 
+		reverseButton = Button()
+			.states_([
+				["Reverse off", Color.gray(0.2), Color.gray(0.8)],
+				["Reverse on", Color.gray(0.2), Color.gray(0.9)]
+			])
+			.mouseDownAction_({
+				arg state;
+				reverseParam.set(1-state.value);
+			})
+			.value_(reverseParam.get);
+
 		gainLayout = VLayout(
 			HLayout(
 				StaticText().string_("Gain"),
-				StaticText().string_("").align_(\right),
+				StaticText().string_(gainParam.units).align_(\right),
 			),
 			HLayout(
 				sliderGain = Slider().orientation_(\horizontal).action_({
@@ -680,7 +703,7 @@ GranulatorUI {
 			VLayout(
 				HLayout(
 					StaticText().string_("Grain Density"),
-					grainDensityUnitLabel = StaticText().string_("grains/sec").align_(\right),
+					grainDensityUnitLabel = StaticText().string_(grainDensityParam.units).align_(\right),
 				),
 				HLayout(
 					sliderGrainDensity = Slider().orientation_(\horizontal).action_({
@@ -700,7 +723,7 @@ GranulatorUI {
 		grainSizeLayout = VLayout(
 			HLayout(
 				StaticText().string_("Grain Size"),
-				grainSizeUnitLabel = StaticText().string_("sec").align_(\right),
+				grainSizeUnitLabel = StaticText().string_(grainSizeParam.units).align_(\right),
 			),
 			HLayout(
 				sliderGrainSize = Slider().orientation_(\horizontal).action_({
@@ -719,7 +742,7 @@ GranulatorUI {
 		delayLayout = VLayout(
 			HLayout(
 				StaticText().string_("Start position delay"),
-				delayUnitLabel = StaticText().string_("sec").align_(\right),
+				delayUnitLabel = StaticText().string_(delayParam.units).align_(\right),
 			),
 			HLayout(
 				sliderDelay = Slider().orientation_(\horizontal).action_({
@@ -738,7 +761,7 @@ GranulatorUI {
 		pitchLayout = VLayout(
 			HLayout(
 				StaticText().string_("Pitch"),
-				StaticText().string_("semitones").align_(\right),
+				StaticText().string_(pitchParam.units).align_(\right),
 			),
 			HLayout(
 				sliderPitch = Slider().orientation_(\horizontal).action_({
@@ -757,7 +780,7 @@ GranulatorUI {
 		stereoWidthLayout = VLayout(
 			HLayout(
 				StaticText().string_("Width (stereo)"),
-				StaticText().string_("").align_(\right),
+				StaticText().string_(stereoWidthParam.units).align_(\right),
 			),
 			HLayout(
 				sliderStereoWidth = Slider().orientation_(\horizontal).action_({
@@ -794,6 +817,7 @@ GranulatorUI {
 			titleLabel,
 			onButton,
 			syncButton,
+			reverseButton,
 			gainLayout,
 			grainDensityLayout,
 			grainSizeLayout,
@@ -837,6 +861,11 @@ GranulatorUI {
 			["Sync off", Color.gray(0.2, 0.8), Color.gray(0.8, 0.5)],
 			["Sync on", Color.gray(0.2, 0.8), Color.grey(0.9, 0.5)]
 		]).valueAction_(syncModeParam.get);
+		reverseButton.enabled_(0);
+		reverseButton.states_([
+			["Reverse off", Color.gray(0.2, 0.8), Color.gray(0.8, 0.5)],
+			["Reverse on", Color.gray(0.2, 0.8), Color.grey(0.9, 0.5)]
+		]).valueAction_(reverseParam.get);
 		sliderGain.enabled_(0);
 		nbGain.enabled_(0);
 		sliderGrainDensity.enabled_(0);
@@ -857,6 +886,11 @@ GranulatorUI {
 			["Sync off", Color.gray(0.2), Color.gray(0.8)],
 			["Sync on", Color.gray(0.2), Color.grey(0.9)]
 		]).valueAction_(syncModeParam.get);
+		reverseButton.enabled_(1);
+		reverseButton.states_([
+			["Reverse off", Color.gray(0.2), Color.gray(0.8)],
+			["Reverse on", Color.gray(0.2), Color.grey(0.9)]
+		]).valueAction_(reverseParam.get);
 		sliderGain.enabled_(1);
 		nbGain.enabled_(1);
 		sliderGrainDensity.enabled_(1);
@@ -910,6 +944,8 @@ GranulatorParam {
 		this.prepareOSCComm;
 		this.broadcast;
 	}
+
+	units { ^cSpec.units }
 
 	broadcast {
 		net.sendMsg(broadcastOscPathName, this.get);

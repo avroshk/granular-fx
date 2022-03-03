@@ -40,7 +40,8 @@ s.waitForBoot({
 
 	// Other UI Defaults
 	var defaultOnState = 0,
-	defaultSyncMode = 1;
+	defaultSyncMode = 1,
+	defaultReverse = 0;
 
 	var granulators = ["Granulator1", "Granulator2", "Granulator3"];
 
@@ -57,13 +58,14 @@ s.waitForBoot({
 
 		paramsStore.addParam(\Gain, id, 0, 1, 0.01, defaultGainValue, "");
 		paramsStore.addParam(\GrainDensity, id, 1, 256, 1, defaultGrainDensityValue, "grains/sec");
-		paramsStore.addParam(\GrainSize, id, 0.01, 1, 0.01, defaultGrainSizeValue, "sec");
+		paramsStore.addParam(\GrainSize, id, 0.01, 1000, 0.01, defaultGrainSizeValue, "milliseconds");
 		paramsStore.addParam(\GrainDelay, id, 0, 1, 0.01, defaultDelayValue, "sec");
 		paramsStore.addParam(\GrainPitch, id, -36, 36, 1, defaultPitchValue, "semitones");
 		paramsStore.addParam(\GrainStereoWidth, id, -1, 1, 0.01, defaultStereoWidthValue, "");
 
 		paramsStore.addParam(\OnState, id, 0, 1, 1, defaultOnState, "");
 		paramsStore.addParam(\SyncMode, id, 0, 1, 1, defaultSyncMode, "");
+		paramsStore.addParam(\Reverse, id, 0, 1, 1, defaultReverse, "");
 	});
 
 	// Initialize Granulator UIs
@@ -141,11 +143,13 @@ s.waitForBoot({
 // [*] Use OSC for handling binary parameters
 // [*] Initialize Synths settings from parameters
 // [*] Disable Master controls till Audio devices are ready
+// [*] Allow grains to be played back in reverse
 // [ ] Update Slider units based on Sync option
 // [ ] Convert grain density unit grains/sec to grains/beat
 // [ ] Persist Slider parameters
 // [ ] Try replacing defer statements and use AppClock for scheduling
 // [ ] Convert seconds to milliseconds when Sync is off
 // [ ] Add modes for Slider range e.g. Mode1: 0.01ms to 1000ms, Mode2: 0.01s to 1s
+// [ ] Add freeze functionality
 
 )
