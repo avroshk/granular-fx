@@ -359,7 +359,7 @@ GranulatorSynth {
 		    panCtrl = pan + LFNoise1.kr(100).bipolar(panRand);
 
 		    ptrRand = LFNoise1.ar(100).bipolar(ptrRandSamples);
-		    totalDelay = max(ptrSampleDelay - ptrRand, minPtrDelay);
+		    totalDelay = max(max(1, ptrSampleDelay) - ptrRand, minPtrDelay);
 
 		    origPtr = In.ar(ptrBus, 1);
 		    ptr = origPtr - totalDelay;
