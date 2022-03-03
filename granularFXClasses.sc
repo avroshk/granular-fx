@@ -252,6 +252,8 @@ GranulatorSynth {
 		grainSizeParam.addListener(\UpdateSynth, {
 			AppClock.sched(0,{
 				synthfx.set(\baseDur, this.calcGrainSize);
+				// Add max criteria to prevent clicking while pitch shiting up
+				synthfx.set(\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate)));
 			});
 		});
 		delayParam.addListener(\UpdateSynth, {
@@ -259,7 +261,13 @@ GranulatorSynth {
 				synthfx.set(\ptrSampleDelay, this.calcDelay);
 			});
 		});
-		pitchParam.addListener(\UpdateSynth, { AppClock.sched(0, { synthfx.set(\rate, this.getPitch); }); });
+		pitchParam.addListener(\UpdateSynth, {
+			AppClock.sched(0, {
+				synthfx.set(\rate, this.getPitch);
+				// Add max criteria to prevent clicking while pitch shiting up
+				synthfx.set(\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate)));
+			});
+		});
 		stereoWidthParam.addListener(\UpdateSynth, { AppClock.sched(0,{ synthfx.set(\pan, stereoWidthParam.get); }); });
 		onStateParam.addListener(\UpdateSynth, { AppClock.sched(0, {
 				if (onStateParam.get == 0) {
@@ -282,7 +290,7 @@ GranulatorSynth {
 						\ptrBus, ptrBus,
 						\ptrSampleDelay, this.calcDelay,
 						\ptrRandomSamples, 0,
-						\minPtrDelay, 0
+						\minPtrDelay, max(0, ((this.calcGrainSize * this.getPitch) - this.calcGrainSize * server.sampleRate))
 					], grainGrp);
 				} {
 					synthfx.free;
@@ -357,9 +365,8 @@ GranulatorSynth {
 		    rateCtrl = rate * LFNoise1.ar(100).exprange(1/rateRand, rateRand);
 		    panCtrl = pan + LFNoise1.kr(100).bipolar(panRand);
 
-			// Add max criteria to prevent clicking
 		    ptrRand = LFNoise1.ar(100).bipolar(ptrRandSamples);
-		    totalDelay = max(max(1, ptrSampleDelay) - ptrRand, max(minPtrDelay, ((baseDur * rate.midiratio) - baseDur * server.sampleRate)));
+		    totalDelay = max(max(1, ptrSampleDelay) - ptrRand, minPtrDelay);
 
 		    origPtr = In.ar(ptrBus, 1);
 		    ptr = origPtr - totalDelay;
