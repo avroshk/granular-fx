@@ -32,8 +32,8 @@ s.waitForBoot({
 	defaultMasterMixValue = 0,
 	defaultMasterTempoValue = 120,
 	defaultGainValue = 0.75,
-	defaultGrainDensityValue = 8,
-	defaultGrainSizeValue = 0.05,
+	defaultGrainDensityValue = 4,
+	defaultGrainSizeValue = 20,
 	defaultDelayValue = 0,
 	defaultPitchValue = 0,
 	defaultStereoWidthValue = 0;
