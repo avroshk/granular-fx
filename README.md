@@ -1,6 +1,8 @@
 # granularFX
 Granular Effects in Supercollider
 
+![Demo](https://vimeo.com/684535902)
+
 ![GUI](gui.png?raw=true "granularFX")
 
 ## Prerequisites
